@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}Detail Penilaian {{ p.siswa.kode_siswa }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Detail Penilaian Siswa: {{ p.siswa.kode_siswa }}</h4>
+    <p class="text-muted small mb-0">Rincian 12 indikator skor, konversi kategori aspek, dan hasil klasifikasi model C4.5.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('bk.penilaian_edit', id=p.id) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+    <a href="{{ url_for('bk.penilaian_list') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar
+    </a>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Info Siswa & Hasil Rekomendasi -->
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-person-badge text-primary me-1"></i> Data Siswa
+      </div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr>
+            <td class="text-muted">Kode Siswa:</td>
+            <td class="fw-bold text-primary">{{ p.siswa.kode_siswa }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Nama:</td>
+            <td class="fw-semibold">{{ p.siswa.nama }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Kelas:</td>
+            <td><span class="badge bg-light text-dark border">{{ p.siswa.kelas }}</span></td>
+          </tr>
+          <tr>
+            <td class="text-muted">Angkatan:</td>
+            <td>{{ p.siswa.angkatan }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Periode:</td>
+            <td class="fw-semibold">{{ p.periode }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Status Hasil Rekomendasi -->
+    <div class="card">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-diagram-3 text-info me-1"></i> Status Klasifikasi
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <small class="text-muted d-block mb-1">Label Guru BK (Ground Truth):</small>
+          {% if p.label == 'Baik' %}
+            <span class="badge badge-baik px-3 py-2 fs-6"><i class="bi bi-check-circle me-1"></i> Baik</span>
+          {% elif p.label == 'Perlu Pendampingan' %}
+            <span class="badge badge-pp px-3 py-2 fs-6"><i class="bi bi-exclamation-triangle me-1"></i> Perlu Pendampingan</span>
+          {% else %}
+            <span class="badge bg-secondary px-3 py-2">Belum Dilabel</span>
+          {% endif %}
+        </div>
+
+        <div>
+          <small class="text-muted d-block mb-1">Prediksi Algoritma C4.5:</small>
+          {% if klasifikasi %}
+            <span class="badge {{ 'badge-baik' if klasifikasi.prediksi == 'Baik' else 'badge-pp' }} px-3 py-2 fs-6 mb-2 d-inline-block">
+              {{ klasifikasi.prediksi }} ({{ '%.1f'|format(klasifikasi.kepercayaan * 100) }}%)
+            </span>
+            <div class="small text-muted">
+              <strong>Aturan C4.5:</strong><br>
+              <code>JIKA {{ klasifikasi.path_aturan }} MAKA {{ klasifikasi.prediksi }}</code>
+            </div>
+          {% else %}
+            <span class="text-muted small">Belum diklasifikasi. Jalankan klasifikasi di menu Klasifikasi.</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rincian 4 Aspek dan 12 Indikator -->
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-grid-3x3-gap text-primary me-1"></i> Rekapitulasi 4 Kategori Aspek Perkembangan
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-bordered mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Aspek</th>
+              <th>Skor Indikator</th>
+              <th>Total Skor</th>
+              <th>Kategori Aspek</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fw-semibold">Interaksi Sosial</td>
+              <td>IS1={{ p.IS1 }}, IS2={{ p.IS2 }}, IS3={{ p.IS3 }}</td>
+              <td class="fw-bold">{{ p.total_IS }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-baik' if p.kat_IS == 'Baik' else ('badge-cukup' if p.kat_IS == 'Cukup' else 'badge-kurang') }}">
+                  {{ p.kat_IS }}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Regulasi Emosi</td>
+              <td>RE1={{ p.RE1 }}, RE2={{ p.RE2 }}, RE3={{ p.RE3 }}</td>
+              <td class="fw-bold">{{ p.total_RE }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-stabil' if p.kat_RE == 'Stabil' else 'badge-labil' }}">
+                  {{ p.kat_RE }}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Empati</td>
+              <td>EM1={{ p.EM1 }}, EM2={{ p.EM2 }}, EM3={{ p.EM3 }}</td>
+              <td class="fw-bold">{{ p.total_EM }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-tinggi' if p.kat_EM == 'Tinggi' else 'badge-rendah' }}">
+                  {{ p.kat_EM }}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Kerja Sama</td>
+              <td>KS1={{ p.KS1 }}, KS2={{ p.KS2 }}, KS3={{ p.KS3 }}</td>
+              <td class="fw-bold">{{ p.total_KS }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-baik' if p.kat_KS == 'Baik' else 'badge-kurang' }}">
+                  {{ p.kat_KS }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Catatan Observasi Wali Kelas untuk Siswa Ini -->
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-text text-primary me-1"></i> Catatan Observasi dari Wali Kelas</span>
+        <span class="badge bg-light text-dark border">{{ daftar_pengamatan|length }} Catatan</span>
+      </div>
+      <div class="card-body p-0">
+        {% if daftar_pengamatan %}
+          <div class="list-group list-group-flush">
+            {% for obs in daftar_pengamatan %}
+              <div class="list-group-item p-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <span class="fw-bold text-dark small">{{ obs.pengamat.nama_lengkap if obs.pengamat else 'Wali Kelas' }}</span>
+                    <span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size: 0.65rem;">Periode: {{ obs.periode }}</span>
+                  </div>
+                  <div>
+                    {% if obs.skor_perilaku %}
+                      <span class="badge {{ 'bg-success' if obs.skor_perilaku >= 4 else ('bg-warning text-dark' if obs.skor_perilaku == 3 else 'bg-danger') }}">
+                        Skor {{ obs.skor_perilaku }}/5
+                      </span>
+                    {% endif %}
+                    <small class="text-muted ms-2" style="font-size: 0.72rem;">{{ obs.created_at.strftime('%d-%m-%Y') }}</small>
+                  </div>
+                </div>
+                <p class="mb-0 small text-dark">{{ obs.catatan }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-3 text-center text-muted small">
+            <i class="bi bi-info-circle me-1"></i> Belum ada catatan pengamatan dari wali kelas untuk siswa ini.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Catatan Peninjauan BK jika ada -->
+    {% if klasifikasi %}
+    <div class="card">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-chat-square-text text-secondary me-1"></i> Catatan Peninjauan Guru BK
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('bk.klasifikasi_tinjau', id=klasifikasi.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <textarea class="form-control" name="catatan_tinjau" rows="3"
+                      placeholder="Tambahkan catatan tindak lanjut pendampingan siswa...">{{ klasifikasi.catatan_tinjau or '' }}</textarea>
+          </div>
+          <button type="submit" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-save me-1"></i> Simpan Catatan Peninjauan
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

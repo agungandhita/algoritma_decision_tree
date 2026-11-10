@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}Detail Siswa {{ siswa.kode_siswa }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Informasi Siswa: {{ siswa.kode_siswa }}</h4>
+    <p class="text-muted small mb-0">Kelas: <strong>{{ siswa.kelas }}</strong> | Mode Tinjauan Wali Kelas (Hanya Baca / Read-Only).</p>
+  </div>
+  <a href="{{ url_for('walikelas.siswa_list') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar Siswa
+  </a>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Riwayat Penilaian BK & Hasil C4.5 -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-clipboard2-check text-primary me-1"></i> Riwayat Penilaian Sosial-Emosional (Guru BK)
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Periode</th>
+                <th>Interaksi Sosial</th>
+                <th>Regulasi Emosi</th>
+                <th>Empati</th>
+                <th>Kerja Sama</th>
+                <th>Rekomendasi C4.5</th>
+                <th>Catatan Guru BK</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in riwayat_penilaian %}
+              {% set hk = p.hasil_klasifikasi.first() %}
+              <tr>
+                <td class="fw-semibold">{{ p.periode }}</td>
+                <td><span class="badge {{ 'badge-baik' if p.kat_IS == 'Baik' else ('badge-cukup' if p.kat_IS == 'Cukup' else 'badge-kurang') }}">{{ p.kat_IS }}</span></td>
+                <td><span class="badge {{ 'badge-stabil' if p.kat_RE == 'Stabil' else 'badge-labil' }}">{{ p.kat_RE }}</span></td>
+                <td><span class="badge {{ 'badge-tinggi' if p.kat_EM == 'Tinggi' else 'badge-rendah' }}">{{ p.kat_EM }}</span></td>
+                <td><span class="badge {{ 'badge-baik' if p.kat_KS == 'Baik' else 'badge-kurang' }}">{{ p.kat_KS }}</span></td>
+                <td>
+                  {% if hk %}
+                    <span class="badge {{ 'badge-baik' if hk.prediksi == 'Baik' else 'badge-pp' }}">{{ hk.prediksi }}</span>
+                  {% else %}
+                    <span class="badge {{ 'badge-baik' if p.label == 'Baik' else 'badge-pp' }}">{{ p.label or '-' }}</span>
+                  {% endif %}
+                </td>
+                <td class="small" style="max-width: 200px;">
+                  {% if hk and hk.catatan_tinjau %}
+                    <span class="text-dark">{{ hk.catatan_tinjau }}</span>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-3">Belum ada penilaian dari guru BK.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Riwayat Catatan Pengamatan Wali Kelas -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-journal-text text-success me-1"></i> Catatan Pengamatan Anda</span>
+        <a href="{{ url_for('walikelas.pengamatan_tambah') }}" class="btn btn-outline-success btn-sm">
+          <i class="bi bi-plus"></i> Tambah
+        </a>
+      </div>
+      <div class="card-body">
+        {% for o in riwayat_pengamatan %}
+        <div class="p-3 mb-2 bg-light rounded border">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-semibold small text-primary">Periode {{ o.periode }}</span>
+            <small class="text-muted">{{ o.created_at.strftime('%d-%m-%Y') }}</small>
+          </div>
+          {% if o.skor_perilaku %}
+            <span class="badge bg-info-subtle text-info mb-1">Skor: {{ o.skor_perilaku }}/5</span>
+          {% endif %}
+          <p class="small mb-0 text-dark">{{ o.catatan }}</p>
+        </div>
+        {% else %}
+        <p class="text-muted small text-center my-4">Belum ada catatan pengamatan untuk siswa ini.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

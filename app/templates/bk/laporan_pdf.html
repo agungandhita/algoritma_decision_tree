@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Laporan Monitoring Sosial & Emosional Siswa</title>
+  <style>
+    @page {
+      size: a4 portrait;
+      margin: 1.5cm 1.2cm 1.5cm 1.2cm;
+    }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 9pt;
+      color: #222;
+      line-height: 1.4;
+    }
+    .kop-surat {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .kop-surat h2 {
+      margin: 0;
+      font-size: 13pt;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+    .kop-surat h3 {
+      margin: 2px 0;
+      font-size: 11pt;
+      font-weight: bold;
+    }
+    .kop-surat p {
+      margin: 0;
+      font-size: 8pt;
+      color: #444;
+    }
+    .judul-laporan {
+      text-align: center;
+      margin: 10px 0 15px 0;
+    }
+    .judul-laporan h4 {
+      margin: 0;
+      font-size: 11pt;
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
+    .meta-table {
+      width: 100%;
+      margin-bottom: 12px;
+      font-size: 8.5pt;
+    }
+    .meta-table td {
+      padding: 2px 0;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+      font-size: 8pt;
+    }
+    .data-table th, .data-table td {
+      border: 1px solid #777;
+      padding: 4px 6px;
+      text-align: center;
+    }
+    .data-table th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    .badge-baik {
+      color: #0d6832;
+      font-weight: bold;
+    }
+    .badge-pp {
+      color: #b31010;
+      font-weight: bold;
+    }
+    .signature-area {
+      margin-top: 25px;
+      width: 100%;
+    }
+    .signature-area td {
+      text-align: center;
+      width: 50%;
+      font-size: 9pt;
+    }
+    .disclaimer {
+      margin-top: 15px;
+      padding: 6px;
+      border: 1px dashed #999;
+      font-size: 7.5pt;
+      color: #555;
+      background-color: #fafafa;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KOP SURAT -->
+  <table style="width: 100%; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px;">
+    <tr>
+      {% if logo_path %}
+      <td style="width: 16%; text-align: center; vertical-align: middle;">
+        <img src="{{ logo_path }}" style="width: 58px; height: 58px;" />
+      </td>
+      <td style="width: 84%; text-align: center; vertical-align: middle;">
+      {% else %}
+      <td style="width: 100%; text-align: center; vertical-align: middle;">
+      {% endif %}
+        <div style="font-size: 12pt; text-transform: uppercase; font-weight: bold; margin: 0;">YAYASAN KHOIRIYAH HASYIM TEBUIRENG</div>
+        <div style="font-size: 13pt; font-weight: bold; margin: 2px 0;">SMK PLUS KHOIRIYAH HASYIM TEBUIRENG</div>
+        <div style="font-size: 7.5pt; color: #444; margin: 0;">Jl. Irian Jaya No. 10, Tebuireng, Jombang, Jawa Timur | Telp: (0321) 861234 | Email: info@smkkh.sch.id</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- JUDUL -->
+  <div class="judul-laporan">
+    <h4>LAPORAN MONITORING KEBUTUHAN PENDAMPINGAN SOSIAL DAN EMOSIONAL SISWA</h4>
+    <p style="margin: 3px 0 0 0; font-size: 8pt; color: #555;">Sistem Pendukung Keputusan Berbasis Algoritma Decision Tree C4.5</p>
+  </div>
+
+  <!-- META -->
+  <table class="meta-table">
+    <tr>
+      <td width="15%"><strong>Periode Penilaian</strong></td>
+      <td width="35%">: {{ periode }}</td>
+      <td width="15%"><strong>Tanggal Cetak</strong></td>
+      <td width="35%">: {{ tanggal_cetak }}</td>
+    </tr>
+    <tr>
+      <td><strong>Filter Kelas / Angkatan</strong></td>
+      <td>: {{ kelas }} / {{ angkatan if angkatan else 'Semua Angkatan' }}</td>
+      <td><strong>Versi Model</strong></td>
+      <td>: {{ model_terbaru.versi_model if model_terbaru else '-' }} (Akurasi: {{ '%.1f'|format(model_terbaru.akurasi * 100) if model_terbaru else '-' }}%)</td>
+    </tr>
+  </table>
+
+  <!-- TABEL DATA -->
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th width="5%">No</th>
+        <th width="11%">Kode Siswa</th>
+        <th width="11%">Kelas</th>
+        <th width="9%">Angkatan</th>
+        <th width="13%">Interaksi Sosial</th>
+        <th width="13%">Regulasi Emosi</th>
+        <th width="12%">Empati</th>
+        <th width="12%">Kerja Sama</th>
+        <th width="14%">Rekomendasi C4.5</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in daftar_penilaian %}
+      {% set hk = p.hasil_klasifikasi.first() %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td><strong>{{ p.siswa.kode_siswa }}</strong></td>
+        <td>{{ p.siswa.kelas }}</td>
+        <td>{{ p.siswa.angkatan }}</td>
+        <td>{{ p.kat_IS }} ({{ p.total_IS }})</td>
+        <td>{{ p.kat_RE }} ({{ p.total_RE }})</td>
+        <td>{{ p.kat_EM }} ({{ p.total_EM }})</td>
+        <td>{{ p.kat_KS }} ({{ p.total_KS }})</td>
+        <td>
+          {% if hk %}
+            <span class="{{ 'badge-baik' if hk.prediksi == 'Baik' else 'badge-pp' }}">
+              {{ hk.prediksi }}
+            </span>
+          {% else %}
+            <span>{{ p.label or '-' }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- CATATAN ETIKA & AKADEMIS -->
+  <div class="disclaimer">
+    <strong>Catatan Penting:</strong> Hasil rekomendasi yang dihasilkan oleh model Decision Tree C4.5 ini merupakan sistem pendukung keputusan (decision support) bagi guru Bimbingan Konseling dan wali kelas untuk pemantauan dini, bukan diagnosis psikologis. Nama siswa sengaja dianonimkan menggunakan kode demi menjaga kerahasiaan data siswa sesuai etika penelitian.
+  </div>
+
+  <!-- TANDA TANGAN -->
+  <table class="signature-area">
+    <tr>
+      <td>
+        Mengetahui,<br>
+        Kepala Sekolah SMK Plus Khoiriyah Hasyim<br><br><br><br>
+        <strong><u>David Sugiarto, S.Pd., M.Si</u></strong><br>
+        Kepala Sekolah
+      </td>
+      <td>
+        Jombang, {{ tanggal_cetak }}<br>
+        Guru Bimbingan Konseling (BK)<br><br><br><br>
+        <strong><u>Bapak Machmud, M.H.</u></strong><br>
+        Guru BK
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

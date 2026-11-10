@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit Siswa' if edit else 'Tambah Siswa' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-header bg-white">
+        <h5 class="fw-bold mb-0">{{ 'Edit Siswa' if edit else 'Tambah Siswa Baru' }}</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          {% if edit %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Kode Siswa (Otomatis)</label>
+            <input type="text" class="form-control bg-light" value="{{ siswa.kode_siswa }}" readonly>
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="nama" class="form-label fw-semibold small">Nama Lengkap Siswa</label>
+            <input type="text" class="form-control" id="nama" name="nama"
+                   value="{{ siswa.nama if edit else '' }}" required placeholder="Masukkan nama lengkap siswa">
+          </div>
+
+          <div class="mb-3">
+            <label for="kelas" class="form-label fw-semibold small">Kelas</label>
+            <input type="text" class="form-control" id="kelas" name="kelas"
+                   value="{{ siswa.kelas if edit else '' }}" required placeholder="Contoh: X RPL, XI TKJ, XII MM">
+          </div>
+
+          <div class="mb-3">
+            <label for="angkatan" class="form-label fw-semibold small">Tahun Angkatan</label>
+            <input type="number" class="form-control" id="angkatan" name="angkatan"
+                   value="{{ siswa.angkatan if edit else 2024 }}" required>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Jenis Kelamin</label>
+            <div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkL" value="L"
+                       {% if not edit or siswa.jenis_kelamin == 'L' %}checked{% endif %}>
+                <label class="form-check-label" for="jkL">Laki-laki</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkP" value="P"
+                       {% if edit and siswa.jenis_kelamin == 'P' %}checked{% endif %}>
+                <label class="form-check-label" for="jkP">Perempuan</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('admin.siswa_list') }}" class="btn btn-outline-secondary">Batal</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-save me-1"></i> {{ 'Simpan Perubahan' if edit else 'Simpan Siswa' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

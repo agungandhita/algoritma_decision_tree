@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Hasil Klasifikasi Kelas {{ kelas_diampu }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Hasil Monitoring Kelas: {{ kelas_diampu }}</h4>
+    <p class="text-muted small mb-0">Rangkuman hasil rekomendasi C4.5 dan kategori perkembangan siswa kelas Anda.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-bar-chart-line text-primary me-1"></i> Data Siswa Kelas {{ kelas_diampu }} (Total: {{ daftar_penilaian|length }})</span>
+    <span class="badge bg-light text-muted border">Identitas anonim sesuai kode</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Kode Siswa</th>
+          <th>Periode</th>
+          <th>Interaksi Sosial</th>
+          <th>Regulasi Emosi</th>
+          <th>Empati</th>
+          <th>Kerja Sama</th>
+          <th>Status Rekomendasi C4.5</th>
+          <th>Kepercayaan</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in daftar_penilaian %}
+        {% set hk = p.hasil_klasifikasi.first() %}
+        <tr>
+          <td><span class="badge bg-primary text-white fw-bold">{{ p.siswa.kode_siswa }}</span></td>
+          <td class="small">{{ p.periode }}</td>
+          <td>
+            <span class="badge {{ 'badge-baik' if p.kat_IS == 'Baik' else ('badge-cukup' if p.kat_IS == 'Cukup' else 'badge-kurang') }}">
+              {{ p.kat_IS }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-stabil' if p.kat_RE == 'Stabil' else 'badge-labil' }}">
+              {{ p.kat_RE }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-tinggi' if p.kat_EM == 'Tinggi' else 'badge-rendah' }}">
+              {{ p.kat_EM }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-baik' if p.kat_KS == 'Baik' else 'badge-kurang' }}">
+              {{ p.kat_KS }}
+            </span>
+          </td>
+          <td>
+            {% if hk %}
+              <span class="badge {{ 'badge-baik' if hk.prediksi == 'Baik' else 'badge-pp' }} px-2 py-1">
+                {{ hk.prediksi }}
+              </span>
+            {% else %}
+              <span class="badge {{ 'badge-baik' if p.label == 'Baik' else 'badge-pp' }}">
+                {{ p.label or '-' }}
+              </span>
+            {% endif %}
+          </td>
+          <td>
+            {% if hk and hk.kepercayaan %}
+              <small class="fw-bold">{{ '%.0f'|format(hk.kepercayaan * 100) }}%</small>
+            {% else %}
+              <span class="text-muted small">-</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('walikelas.siswa_detail', id=p.siswa.id) }}" class="btn btn-outline-info btn-sm">
+              <i class="bi bi-eye"></i> Detail
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-4">Belum ada data penilaian untuk kelas ini.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

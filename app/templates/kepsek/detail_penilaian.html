@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}Detail Penilaian {{ p.siswa.kode_siswa }} - Kepala Sekolah{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Detail Penilaian Siswa: {{ p.siswa.kode_siswa }}</h4>
+    <p class="text-muted small mb-0">Rincian 12 indikator skor, konversi kategori aspek, dan hasil klasifikasi model C4.5.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('kepsek.penilaian_list') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Kembali ke Data Penilaian
+    </a>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Info Siswa & Status Klasifikasi -->
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-person-badge text-primary me-1"></i> Data Siswa
+      </div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr>
+            <td class="text-muted">Kode Siswa:</td>
+            <td class="fw-bold text-primary">{{ p.siswa.kode_siswa }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Nama:</td>
+            <td class="fw-semibold">{{ p.siswa.nama }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Kelas:</td>
+            <td><span class="badge bg-light text-dark border">{{ p.siswa.kelas }}</span></td>
+          </tr>
+          <tr>
+            <td class="text-muted">Angkatan:</td>
+            <td>{{ p.siswa.angkatan }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Periode:</td>
+            <td class="fw-semibold">{{ p.periode }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Status Hasil Rekomendasi -->
+    <div class="card">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-diagram-3 text-info me-1"></i> Status Klasifikasi
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <small class="text-muted d-block mb-1">Label Guru BK (Ground Truth):</small>
+          {% if p.label == 'Baik' %}
+            <span class="badge badge-baik px-3 py-2 fs-6"><i class="bi bi-check-circle me-1"></i> Baik</span>
+          {% elif p.label == 'Perlu Pendampingan' %}
+            <span class="badge badge-pp px-3 py-2 fs-6"><i class="bi bi-exclamation-triangle me-1"></i> Perlu Pendampingan</span>
+          {% else %}
+            <span class="badge bg-secondary px-3 py-2">Belum Dilabel</span>
+          {% endif %}
+        </div>
+
+        <div>
+          <small class="text-muted d-block mb-1">Prediksi Algoritma C4.5:</small>
+          {% if klasifikasi %}
+            <span class="badge {{ 'badge-baik' if klasifikasi.prediksi == 'Baik' else 'badge-pp' }} px-3 py-2 fs-6 mb-2 d-inline-block">
+              {{ klasifikasi.prediksi }} ({{ '%.1f'|format(klasifikasi.kepercayaan * 100) }}%)
+            </span>
+            <div class="small text-muted">
+              <strong>Aturan C4.5:</strong><br>
+              <code>JIKA {{ klasifikasi.path_aturan }} MAKA {{ klasifikasi.prediksi }}</code>
+            </div>
+          {% else %}
+            <span class="text-muted small">Belum diklasifikasi oleh model C4.5.</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rincian 4 Aspek dan 12 Indikator -->
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-grid-3x3-gap text-primary me-1"></i> Rekapitulasi 4 Kategori Aspek Perkembangan
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-bordered mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Aspek</th>
+              <th>Skor Indikator</th>
+              <th>Total Skor</th>
+              <th>Kategori Akhir</th>
+              <th>Aturan Penentuan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fw-semibold">1. Interaksi Sosial (IS)</td>
+              <td>IS1={{ p.IS1 }}, IS2={{ p.IS2 }}, IS3={{ p.IS3 }}</td>
+              <td class="fw-bold">{{ p.total_IS }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-baik' if p.kat_IS == 'Baik' else ('badge-cukup' if p.kat_IS == 'Cukup' else 'badge-kurang') }}">
+                  {{ p.kat_IS }}
+                </span>
+              </td>
+              <td class="small text-muted">&ge;9 Baik, 6-8 Cukup, &lt;6 Kurang</td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">2. Regulasi Emosi (RE)</td>
+              <td>RE1={{ p.RE1 }}, RE2={{ p.RE2 }}, RE3={{ p.RE3 }}</td>
+              <td class="fw-bold">{{ p.total_RE }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-stabil' if p.kat_RE == 'Stabil' else 'badge-labil' }}">
+                  {{ p.kat_RE }}
+                </span>
+              </td>
+              <td class="small text-muted">&ge;9 Stabil, &lt;9 Labil</td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">3. Empati (EM)</td>
+              <td>EM1={{ p.EM1 }}, EM2={{ p.EM2 }}, EM3={{ p.EM3 }}</td>
+              <td class="fw-bold">{{ p.total_EM }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-tinggi' if p.kat_EM == 'Tinggi' else 'badge-rendah' }}">
+                  {{ p.kat_EM }}
+                </span>
+              </td>
+              <td class="small text-muted">&ge;9 Tinggi, &lt;9 Rendah</td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">4. Kerja Sama (KS)</td>
+              <td>KS1={{ p.KS1 }}, KS2={{ p.KS2 }}, KS3={{ p.KS3 }}</td>
+              <td class="fw-bold">{{ p.total_KS }} / 12</td>
+              <td>
+                <span class="badge {{ 'badge-baik' if p.kat_KS == 'Baik' else 'badge-kurang' }}">
+                  {{ p.kat_KS }}
+                </span>
+              </td>
+              <td class="small text-muted">&ge;9 Baik, &lt;9 Kurang</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rincian 12 Indikator -->
+    <div class="card">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-list-check text-primary me-1"></i> Rincian 12 Skor Indikator Penilaian
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-secondary border-bottom pb-1 small">Interaksi Sosial</h6>
+            <ul class="list-group list-group-flush small">
+              <li class="list-group-item d-flex justify-content-between px-0">IS1. Komunikasi Terbuka: <span class="badge bg-secondary">{{ p.IS1 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">IS2. Hubungan Teman Sebaya: <span class="badge bg-secondary">{{ p.IS2 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">IS3. Penerimaan Kelompok: <span class="badge bg-secondary">{{ p.IS3 }}</span></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-secondary border-bottom pb-1 small">Regulasi Emosi</h6>
+            <ul class="list-group list-group-flush small">
+              <li class="list-group-item d-flex justify-content-between px-0">RE1. Pengendalian Diri: <span class="badge bg-secondary">{{ p.RE1 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">RE2. Ketenangan Menghadapi Masalah: <span class="badge bg-secondary">{{ p.RE2 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">RE3. Kestabilan Suasana Hati: <span class="badge bg-secondary">{{ p.RE3 }}</span></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-secondary border-bottom pb-1 small">Empati</h6>
+            <ul class="list-group list-group-flush small">
+              <li class="list-group-item d-flex justify-content-between px-0">EM1. Kepedulian Teman: <span class="badge bg-secondary">{{ p.EM1 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">EM2. Menghargai Perbedaan: <span class="badge bg-secondary">{{ p.EM2 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">EM3. Tanggap Terhadap Kesulitan: <span class="badge bg-secondary">{{ p.EM3 }}</span></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-secondary border-bottom pb-1 small">Kerja Sama</h6>
+            <ul class="list-group list-group-flush small">
+              <li class="list-group-item d-flex justify-content-between px-0">KS1. Partisipasi Kelompok: <span class="badge bg-secondary">{{ p.KS1 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">KS2. Berbagi Peran: <span class="badge bg-secondary">{{ p.KS2 }}</span></li>
+              <li class="list-group-item d-flex justify-content-between px-0">KS3. Komitmen Tugas Bersama: <span class="badge bg-secondary">{{ p.KS3 }}</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

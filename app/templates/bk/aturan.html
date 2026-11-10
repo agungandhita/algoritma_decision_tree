@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Aturan JIKA-MAKA C4.5 - {{ versi }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Daftar Aturan Klasifikasi (JIKA-MAKA)</h4>
+    <p class="text-muted small mb-0">Model: <code>{{ versi }}</code> | Disimpan di tabel <code>aturan_c45</code> database MySQL.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('bk.model_pohon', versi=versi) }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-diagram-3 me-1"></i> Lihat Pohon
+    </a>
+    <a href="{{ url_for('bk.model_index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Kembali ke Model
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-check text-success me-1"></i> Total Aturan Terbentuk: {{ daftar_aturan|length }} Aturan</span>
+    <span class="badge bg-light text-muted border">Urutan berdasarkan traversal daun pohon keputusan</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th style="width: 80px;">No.</th>
+          <th>Kondisi (JIKA / IF)</th>
+          <th>Rekomendasi (MAKA / THEN)</th>
+          <th class="text-center" style="width: 120px;">Support</th>
+          <th class="text-center" style="width: 140px;">Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in daftar_aturan %}
+        <tr>
+          <td class="fw-bold text-center">R{{ r.no_aturan }}</td>
+          <td>
+            <code class="text-dark bg-light px-2 py-1 rounded">
+              JIKA
+              {% set parts = r.kondisi.split(' AND ') %}
+              {% for part in parts %}
+                {{ part | e }}{% if not loop.last %} <strong class="text-primary">DAN</strong> {% endif %}
+              {% endfor %}
+            </code>
+          </td>
+          <td>
+            {% if r.prediksi == 'Baik' %}
+              <span class="badge badge-baik px-2 py-1"><i class="bi bi-check-circle me-1"></i> Baik</span>
+            {% else %}
+              <span class="badge badge-pp px-2 py-1"><i class="bi bi-exclamation-triangle me-1"></i> Perlu Pendampingan</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <span class="badge bg-secondary-subtle text-secondary">{{ r.support }} sampel</span>
+          </td>
+          <td class="text-center">
+            <div class="d-flex align-items-center gap-2 justify-content-center">
+              <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ r.confidence * 100 }}%"></div>
+              </div>
+              <small class="fw-bold">{{ '%.1f'|format(r.confidence * 100) }}%</small>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

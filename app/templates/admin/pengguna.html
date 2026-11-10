@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Kelola Pengguna{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Daftar Pengguna Sistem</h4>
+    <p class="text-muted small mb-0">Manajemen akun pengguna dan hak akses berdasarkan peran.</p>
+  </div>
+  <a href="{{ url_for('admin.pengguna_tambah') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-fill-add"></i> Tambah Pengguna Baru
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nama Lengkap</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Peran</th>
+          <th>Kelas Diampu</th>
+          <th>Status</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in pagination.items %}
+        <tr>
+          <td class="fw-semibold">{{ u.nama_lengkap }}</td>
+          <td><code>{{ u.username }}</code></td>
+          <td class="text-muted small">{{ u.email }}</td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase">
+              {{ u.peran.replace('_', ' ') }}
+            </span>
+          </td>
+          <td>{{ u.kelas_diampu or '-' }}</td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge bg-success-subtle text-success">Aktif</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger">Nonaktif</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <a href="{{ url_for('admin.pengguna_edit', id=u.id) }}" class="btn btn-outline-secondary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="POST" action="{{ url_for('admin.pengguna_toggle_status', id=u.id) }}" class="d-inline" onsubmit="return confirm('Ubah status aktif akun ini?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-{{ 'warning' if u.is_active else 'success' }}" title="{{ 'Nonaktifkan' if u.is_active else 'Aktifkan' }}">
+                  <i class="bi bi-{{ 'slash-circle' if u.is_active else 'check-circle' }}"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+    <span class="text-muted small">Menampilkan halaman {{ pagination.page }} dari {{ pagination.pages }}</span>
+    <ul class="pagination pagination-sm mb-0">
+      {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if page_num %}
+          <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.pengguna_list', page=page_num) }}">{{ page_num }}</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Cetak Laporan Monitoring{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Cetak & Ekspor Laporan Monitoring</h4>
+    <p class="text-muted small mb-0">Cetak laporan hasil pemantauan perkembangan sosial dan emosional siswa dalam format PDF dan Excel.</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white">
+        <h5 class="fw-bold mb-0"><i class="bi bi-printer text-primary me-2"></i> Pengaturan Cetak Laporan</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="GET">
+          <div class="mb-3">
+            <label for="periode" class="form-label fw-semibold small">Pilih Periode Penilaian</label>
+            <select class="form-select" id="periode" name="periode">
+              <option value="">Semua Periode</option>
+              {% for p in daftar_periode %}
+                <option value="{{ p }}">{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="kelas" class="form-label fw-semibold small">Pilih Kelas</label>
+            <select class="form-select" id="kelas" name="kelas">
+              <option value="">Semua Kelas</option>
+              {% for k in daftar_kelas %}
+                <option value="{{ k }}">{{ k }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label for="angkatan" class="form-label fw-semibold small">Pilih Angkatan / Tahun Jenjang</label>
+            <select class="form-select" id="angkatan" name="angkatan">
+              <option value="">Semua Angkatan</option>
+              {% for a in daftar_angkatan %}
+                <option value="{{ a }}">Angkatan {{ a }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-danger py-2" onclick="downloadPDF()">
+              <i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak / Unduh Laporan PDF (Resmi)
+            </button>
+            <button type="button" class="btn btn-success py-2" onclick="downloadExcel()">
+              <i class="bi bi-file-earmark-excel-fill me-1"></i> Ekspor ke File Microsoft Excel (.xlsx)
+            </button>
+          </div>
+        </form>
+
+        <div class="alert alert-info mt-4 mb-0 small">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>Catatan Akademis:</strong> Laporan ini berisi hasil klasifikasi model C4.5 yang berfungsi sebagai sistem pendukung keputusan (decision support) bagi guru Bimbingan Konseling, bukan diagnosis psikologis klinis.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function downloadPDF() {
+  const periode = document.getElementById('periode').value;
+  const kelas = document.getElementById('kelas').value;
+  const angkatan = document.getElementById('angkatan').value;
+  const url = `{{ url_for('bk.laporan_pdf') }}?periode=${encodeURIComponent(periode)}&kelas=${encodeURIComponent(kelas)}&angkatan=${encodeURIComponent(angkatan)}`;
+  window.open(url, '_blank');
+}
+
+function downloadExcel() {
+  const periode = document.getElementById('periode').value;
+  const kelas = document.getElementById('kelas').value;
+  const angkatan = document.getElementById('angkatan').value;
+  const url = `{{ url_for('bk.laporan_excel') }}?periode=${encodeURIComponent(periode)}&kelas=${encodeURIComponent(kelas)}&angkatan=${encodeURIComponent(angkatan)}`;
+  window.location.href = url;
+}
+</script>
+{% endblock %}
+

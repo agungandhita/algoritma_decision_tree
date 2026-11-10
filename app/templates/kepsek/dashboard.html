@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Eksekutif Kepala Sekolah{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Dashboard Eksekutif Kepala Sekolah</h4>
+    <p class="text-muted small mb-0">Laporan makro kondisi sosial dan emosional seluruh siswa SMK Plus Khoiriyah Hasyim Tebuireng.</p>
+  </div>
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <form method="GET" class="d-inline-block">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white text-muted"><i class="bi bi-calendar"></i> Periode:</span>
+        <select class="form-select" name="periode" onchange="this.form.submit()">
+          {% for p in daftar_periode %}
+            <option value="{{ p }}" {% if periode_terpilih == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+    <a href="{{ url_for('kepsek.catatan_list') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-journal-text me-1"></i> Catatan Wali Kelas & BK
+    </a>
+    <a href="{{ url_for('kepsek.laporan_index') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-printer me-1"></i> Cetak Laporan
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Populasi Siswa</span>
+          <h2 class="fw-bold mb-0 text-dark">{{ total_siswa }}</h2>
+        </div>
+        <div class="bg-primary-subtle text-primary rounded-circle p-3 fs-4">
+          <i class="bi bi-people-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Siswa Dinilai</span>
+          <h2 class="fw-bold mb-0 text-info">{{ total_dinilai }}</h2>
+        </div>
+        <div class="bg-info-subtle text-info rounded-circle p-3 fs-4">
+          <i class="bi bi-clipboard2-check-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Persentase Baik</span>
+          <h2 class="fw-bold mb-0 text-success">{{ pct_baik }}%</h2>
+          <small class="text-muted">({{ n_baik }} siswa)</small>
+        </div>
+        <div class="bg-success-subtle text-success rounded-circle p-3 fs-4">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Perlu Pendampingan</span>
+          <h2 class="fw-bold mb-0 text-danger">{{ pct_pp }}%</h2>
+          <small class="text-muted">({{ n_pp }} siswa)</small>
+        </div>
+        <div class="bg-danger-subtle text-danger rounded-circle p-3 fs-4">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+  <!-- Grafik Per Kelas -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-bar-chart-fill text-primary me-1"></i> Perbandingan Status Siswa per Kelas (Periode {{ periode_terpilih }})
+      </div>
+      <div class="card-body">
+        <div style="height: 280px; width: 100%;">
+          <canvas id="chartPerKelas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donut Chart Distribusi Status Keseluruhan -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header bg-white fw-bold">
+        <i class="bi bi-pie-chart-fill text-info me-1"></i> Komposisi Hasil Rekomendasi
+      </div>
+      <div class="card-body d-flex flex-column justify-content-center align-items-center">
+        <div style="height: 240px; width: 100%;">
+          <canvas id="chartStatusMakro"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabel Ringkasan Eksekutif per Kelas -->
+<div class="card">
+  <div class="card-header bg-white fw-bold">
+    <i class="bi bi-table text-primary me-1"></i> Matriks Rekapitulasi per Kelas
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nama Kelas</th>
+          <th>Total Siswa</th>
+          <th>Telah Dinilai</th>
+          <th>Siswa "Baik"</th>
+          <th>"Perlu Pendampingan"</th>
+          <th>Persentase "Baik"</th>
+          <th>Status Kondusivitas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in ringkasan_kelas %}
+        <tr>
+          <td class="fw-bold text-dark">{{ r.kelas }}</td>
+          <td>{{ r.total_siswa }}</td>
+          <td>{{ r.dinilai }}</td>
+          <td><span class="badge badge-baik px-2 py-1">{{ r.baik }}</span></td>
+          <td><span class="badge badge-pp px-2 py-1">{{ r.perlu_pendampingan }}</span></td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 8px; width: 80px;">
+                <div class="progress-bar bg-success" role="progressbar" data-progress="{{ r.persen_baik }}" style="width: 0;"></div>
+              </div>
+              <small class="fw-bold">{{ r.persen_baik }}%</small>
+            </div>
+          </td>
+          <td>
+            {% if r.persen_baik >= 75 %}
+              <span class="badge bg-success-subtle text-success">Sangat Baik</span>
+            {% elif r.persen_baik >= 50 %}
+              <span class="badge bg-warning-subtle text-warning">Cukup Perhatian</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger">Prioritas Intervensi</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="kepsekDashboardData">
+{
+  "labelsKelas": {{ ringkasan_kelas|map(attribute='kelas')|list|tojson }},
+  "dataBaik": {{ ringkasan_kelas|map(attribute='baik')|list|tojson }},
+  "dataPP": {{ ringkasan_kelas|map(attribute='perlu_pendampingan')|list|tojson }},
+  "nBaik": {{ n_baik|tojson }},
+  "nPP": {{ n_pp|tojson }}
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Set nilai progress bar secara aman
+  document.querySelectorAll('.progress-bar[data-progress]').forEach(function (bar) {
+    bar.style.width = bar.getAttribute('data-progress') + '%';
+  });
+
+  const dataEl = document.getElementById('kepsekDashboardData');
+  if (!dataEl) return;
+  const dashboardData = JSON.parse(dataEl.textContent);
+
+  // Chart Per Kelas
+  const ctxKelas = document.getElementById('chartPerKelas').getContext('2d');
+  new Chart(ctxKelas, {
+    type: 'bar',
+    data: {
+      labels: dashboardData.labelsKelas,
+      datasets: [
+        {
+          label: 'Siswa Baik',
+          data: dashboardData.dataBaik,
+          backgroundColor: '#16a34a'
+        },
+        {
+          label: 'Perlu Pendampingan',
+          data: dashboardData.dataPP,
+          backgroundColor: '#dc2626'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true }
+      },
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+
+  // Chart Donut Makro
+  const ctxMakro = document.getElementById('chartStatusMakro').getContext('2d');
+  new Chart(ctxMakro, {
+    type: 'doughnut',
+    data: {
+      labels: ['Baik', 'Perlu Pendampingan'],
+      datasets: [{
+        data: [dashboardData.nBaik, dashboardData.nPP],
+        backgroundColor: ['#16a34a', '#dc2626'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}
+

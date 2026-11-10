@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Daftar Siswa Kelas {{ kelas_diampu }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Daftar Siswa Kelas {{ kelas_diampu }}</h4>
+    <p class="text-muted small mb-0">Daftar siswa dalam kelas binaan Anda. Identitas siswa dilindungi dengan kode anonim.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Kode Siswa</th>
+          <th>Kelas</th>
+          <th>Angkatan</th>
+          <th>L/P</th>
+          <th>Status Rekomendasi Terakhir</th>
+          <th>Catatan Guru BK</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in daftar_siswa %}
+        {% set p = penilaian_map.get(s.id) if penilaian_map else s.penilaian_terbaru %}
+        <tr>
+          <td><span class="badge bg-primary text-white fw-bold">{{ s.kode_siswa }}</span></td>
+          <td><span class="badge bg-light text-dark border">{{ s.kelas }}</span></td>
+          <td>{{ s.angkatan }}</td>
+          <td><span class="badge bg-light text-dark border">{{ s.jenis_kelamin or '-' }}</span></td>
+          <td>
+            {% if p %}
+              {% set hk = p.hasil_klasifikasi.first() %}
+              {% if hk %}
+                <span class="badge {{ 'badge-baik' if hk.prediksi == 'Baik' else 'badge-pp' }}">
+                  {{ hk.prediksi }}
+                </span>
+              {% else %}
+                <span class="badge {{ 'badge-baik' if p.label == 'Baik' else 'badge-pp' }}">
+                  {{ p.label or '-' }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted small">-</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p %}
+              {% set hk = p.hasil_klasifikasi.first() %}
+              {% if hk and hk.catatan_tinjau %}
+                <div class="small p-2 bg-light rounded border text-dark" style="max-width: 290px;">
+                  <i class="bi bi-chat-left-quote text-primary me-1"></i>
+                  <span>{{ hk.catatan_tinjau }}</span>
+                </div>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('walikelas.siswa_detail', id=s.id) }}" class="btn btn-outline-info btn-sm">
+              <i class="bi bi-eye"></i> Detail & Catatan
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

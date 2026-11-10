@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Wali Kelas {{ kelas_diampu }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Dashboard Wali Kelas: {{ kelas_diampu }}</h4>
+    <p class="text-muted small mb-0">Pemantauan perkembangan dan catatan perilaku siswa kelas binaan.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('walikelas.pengamatan_tambah') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil-square me-1"></i> Tambah Catatan Pengamatan
+    </a>
+    <a href="{{ url_for('walikelas.hasil_kelas') }}" class="btn btn-outline-info btn-sm">
+      <i class="bi bi-bar-chart-line me-1"></i> Lihat Hasil Kelas
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Total Siswa Kelas</span>
+          <h2 class="fw-bold mb-0 text-dark">{{ total_siswa }}</h2>
+        </div>
+        <div class="bg-primary-subtle text-primary rounded-circle p-3 fs-4">
+          <i class="bi bi-people-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Siswa Kategori Baik</span>
+          <h2 class="fw-bold mb-0 text-success">{{ n_baik }}</h2>
+        </div>
+        <div class="bg-success-subtle text-success rounded-circle p-3 fs-4">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-metric p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase">Perlu Pendampingan</span>
+          <h2 class="fw-bold mb-0 text-danger">{{ n_pp }}</h2>
+        </div>
+        <div class="bg-danger-subtle text-danger rounded-circle p-3 fs-4">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Observations -->
+<div class="card">
+  <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-journal-text text-primary me-1"></i> Catatan Pengamatan Terbaru Anda</span>
+    <a href="{{ url_for('walikelas.pengamatan_list') }}" class="btn btn-link btn-sm text-decoration-none">Semua Catatan</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Kode Siswa</th>
+          <th>Periode</th>
+          <th>Tanggal Catat</th>
+          <th>Skor Perilaku</th>
+          <th>Isi Catatan Pengamatan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in pengamatan_terbaru %}
+        <tr>
+          <td><span class="badge bg-primary text-white fw-bold">{{ o.siswa.kode_siswa }}</span></td>
+          <td class="small">{{ o.periode }}</td>
+          <td class="small text-muted">{{ o.created_at.strftime('%d-%m-%Y') }}</td>
+          <td>
+            {% if o.skor_perilaku %}
+              <span class="badge bg-info-subtle text-info border">{{ o.skor_perilaku }} / 5</span>
+            {% else %}
+              <span class="text-muted small">-</span>
+            {% endif %}
+          </td>
+          <td class="small">{{ o.catatan }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">Belum ada catatan pengamatan. Klik "Tambah Catatan Pengamatan" di atas.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
