@@ -68,12 +68,6 @@
           </div>
         </div>
       </div>
-      <div class="mt-3 p-2 bg-light border rounded small text-secondary d-flex align-items-center gap-2">
-        <i class="bi bi-lightbulb-fill text-warning fs-5"></i>
-        <div>
-          <strong>Tips Akademik / Skripsi:</strong> Standar performa pohon keputusan C4.5 yang sangat baik dan realistis berada di rentang <strong>85% – 95%</strong>. Hindari mengisi angka 100% agar tidak dianggap <em>overfitting</em> (terlalu sempurna/tidak natural).
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -85,20 +79,7 @@
     <span class="fw-bold"><i class="bi bi-cpu me-1"></i> Model Aktif: {{ model_aktif.versi_model }}</span>
     <div class="d-flex align-items-center gap-2">
       <span class="badge bg-light text-primary">Dilatih pada: {{ model_aktif.created_at.strftime('%d-%m-%Y %H:%M') }}</span>
-      <button type="button" class="btn btn-warning btn-sm fw-bold text-dark btn-edit-metrik shadow-sm"
-              data-bs-toggle="modal"
-              data-bs-target="#modalEditMetrik"
-              data-versi="{{ model_aktif.versi_model }}"
-              data-akurasi="{{ '%.2f'|format(model_aktif.akurasi * 100) }}"
-              data-presisi="{{ '%.2f'|format(model_aktif.presisi * 100) }}"
-              data-recall="{{ '%.2f'|format(model_aktif.recall * 100) }}"
-              data-f1="{{ '%.2f'|format(model_aktif.f1_score * 100) }}"
-              data-cm-bb="{{ confusion_dict.get('Baik', {}).get('Baik', 0) }}"
-              data-cm-bp="{{ confusion_dict.get('Baik', {}).get('Perlu Pendampingan', 0) }}"
-              data-cm-pb="{{ confusion_dict.get('Perlu Pendampingan', {}).get('Baik', 0) }}"
-              data-cm-pp="{{ confusion_dict.get('Perlu Pendampingan', {}).get('Perlu Pendampingan', 0) }}">
-        <i class="bi bi-pencil-square me-1"></i> Edit Metrik Evaluasi
-      </button>
+      <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-mortarboard-fill me-1"></i> Data Uji: Angkatan {{ model_aktif.angkatan_uji or 2025 }} (n={{ model_aktif.n_uji }})</span>
     </div>
   </div>
   <div class="card-body p-4">
@@ -233,17 +214,6 @@
           <td><span class="badge bg-light text-dark border">{{ m.n_aturan }}</span></td>
           <td class="text-end">
             <div class="btn-group btn-group-sm">
-              <button type="button" class="btn btn-outline-warning btn-edit-metrik"
-                      title="Edit Metrik"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalEditMetrik"
-                      data-versi="{{ m.versi_model }}"
-                      data-akurasi="{{ '%.2f'|format(m.akurasi * 100) }}"
-                      data-presisi="{{ '%.2f'|format(m.presisi * 100) }}"
-                      data-recall="{{ '%.2f'|format(m.recall * 100) }}"
-                      data-f1="{{ '%.2f'|format(m.f1_score * 100) }}">
-                <i class="bi bi-pencil-square"></i>
-              </button>
               <a href="{{ url_for('bk.model_pohon', versi=m.versi_model) }}" class="btn btn-outline-primary" title="Lihat Pohon">
                 <i class="bi bi-diagram-3"></i> Pohon
               </a>
@@ -258,174 +228,6 @@
     </table>
   </div>
 </div>
-
-<!-- Modal Edit Metrik Evaluasi -->
-<div class="modal fade" id="modalEditMetrik" tabindex="-1" aria-labelledby="modalEditMetrikLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content shadow">
-      <form id="formEditMetrik" method="POST" action="">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title fs-6 fw-bold" id="modalEditMetrikLabel">
-            <i class="bi bi-pencil-square me-1"></i> Edit Metrik Evaluasi: <span id="spanVersiModel" class="badge bg-light text-primary font-monospace">-</span>
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4">
-          <!-- Template Siap Pakai untuk Orang Awam -->
-          <div class="p-3 bg-light border rounded mb-3">
-            <span class="fw-bold small d-block mb-1 text-dark"><i class="bi bi-magic me-1 text-primary"></i> Isi Cepat dengan Angka Rekomendasi (Opsional):</span>
-            <div class="d-flex gap-2 flex-wrap">
-              <button type="button" class="btn btn-outline-primary btn-sm btn-preset"
-                      data-acc="92.50" data-pre="93.00" data-rec="91.50" data-f1="92.20"
-                      data-bb="25" data-bp="2" data-pb="1" data-pp="12">
-                Pilihan A: Performa Sangat Baik (92.5%)
-              </button>
-              <button type="button" class="btn btn-outline-success btn-sm btn-preset"
-                      data-acc="88.50" data-pre="89.00" data-rec="87.50" data-f1="88.20"
-                      data-bb="24" data-bp="3" data-pb="2" data-pp="11">
-                Pilihan B: Standar Natural (88.5%)
-              </button>
-            </div>
-            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">* Klik salah satu pilihan di atas jika Anda ingin form terisi angka standar skripsi secara otomatis.</small>
-          </div>
-
-          <div class="row g-3 mb-3">
-            <div class="col-6">
-              <label class="form-label fw-semibold small text-primary mb-1">
-                1. Akurasi (Accuracy)
-              </label>
-              <div class="input-group input-group-sm mb-1">
-                <input type="number" step="0.01" min="0" max="100" class="form-control" name="akurasi" id="inputAkurasi" required>
-                <span class="input-group-text">%</span>
-              </div>
-              <small class="text-muted d-block" style="font-size: 0.72rem;">Ketepatan tebakan sistem secara keseluruhan.</small>
-            </div>
-            <div class="col-6">
-              <label class="form-label fw-semibold small text-success mb-1">
-                2. Presisi (Precision)
-              </label>
-              <div class="input-group input-group-sm mb-1">
-                <input type="number" step="0.01" min="0" max="100" class="form-control" name="presisi" id="inputPresisi" required>
-                <span class="input-group-text">%</span>
-              </div>
-              <small class="text-muted d-block" style="font-size: 0.72rem;">Keyakinan tebakan "Perlu Pendampingan".</small>
-            </div>
-            <div class="col-6">
-              <label class="form-label fw-semibold small text-info mb-1">
-                3. Recall (Sensitivity)
-              </label>
-              <div class="input-group input-group-sm mb-1">
-                <input type="number" step="0.01" min="0" max="100" class="form-control" name="recall" id="inputRecall" required>
-                <span class="input-group-text">%</span>
-              </div>
-              <small class="text-muted d-block" style="font-size: 0.72rem;">Kepekaan agar siswa bermasalah tidak luput.</small>
-            </div>
-            <div class="col-6">
-              <label class="form-label fw-semibold small text-warning mb-1">
-                4. F1-Score
-              </label>
-              <div class="input-group input-group-sm mb-1">
-                <input type="number" step="0.01" min="0" max="100" class="form-control" name="f1_score" id="inputF1" required>
-                <span class="input-group-text">%</span>
-              </div>
-              <small class="text-muted d-block" style="font-size: 0.72rem;">Keseimbangan nilai Presisi &amp; Recall.</small>
-            </div>
-          </div>
-
-          <!-- Accordion Confusion Matrix Opsional -->
-          <div class="accordion" id="accordionCM">
-            <div class="accordion-item border rounded">
-              <h2 class="accordion-header">
-                <button class="accordion-button collapsed py-2 small fw-semibold bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCM">
-                  <i class="bi bi-table me-2 text-secondary"></i> Sesuaikan Confusion Matrix (Opsional)
-                </button>
-              </h2>
-              <div id="collapseCM" class="accordion-collapse collapse" data-bs-parent="#accordionCM">
-                <div class="accordion-body p-3 bg-white">
-                  <p class="small text-muted mb-2">Isi jika Anda juga ingin menyesuaikan jumlah sampel pada Confusion Matrix:</p>
-                  <div class="row g-2 text-center small">
-                    <div class="col-6">
-                      <label class="form-label text-muted mb-1">Baik &rarr; Baik (TN)</label>
-                      <input type="number" min="0" class="form-control form-control-sm text-center" name="cm_bb" id="inputCmBB" placeholder="-">
-                    </div>
-                    <div class="col-6">
-                      <label class="form-label text-muted mb-1">Baik &rarr; PP (FP)</label>
-                      <input type="number" min="0" class="form-control form-control-sm text-center" name="cm_bp" id="inputCmBP" placeholder="-">
-                    </div>
-                    <div class="col-6">
-                      <label class="form-label text-muted mb-1">PP &rarr; Baik (FN)</label>
-                      <input type="number" min="0" class="form-control form-control-sm text-center" name="cm_pb" id="inputCmPB" placeholder="-">
-                    </div>
-                    <div class="col-6">
-                      <label class="form-label text-muted mb-1">PP &rarr; PP (TP)</label>
-                      <input type="number" min="0" class="form-control form-control-sm text-center" name="cm_pp" id="inputCmPP" placeholder="-">
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer bg-light py-2">
-          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-primary btn-sm">
-            <i class="bi bi-check-circle me-1"></i> Simpan Perubahan Metrik
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const formEdit = document.getElementById('formEditMetrik');
-  const spanVersi = document.getElementById('spanVersiModel');
-  const inAkurasi = document.getElementById('inputAkurasi');
-  const inPresisi = document.getElementById('inputPresisi');
-  const inRecall = document.getElementById('inputRecall');
-  const inF1 = document.getElementById('inputF1');
-  const inCmBB = document.getElementById('inputCmBB');
-  const inCmBP = document.getElementById('inputCmBP');
-  const inCmPB = document.getElementById('inputCmPB');
-  const inCmPP = document.getElementById('inputCmPP');
-
-  document.querySelectorAll('.btn-edit-metrik').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const versi = this.getAttribute('data-versi') || '';
-      spanVersi.textContent = versi;
-      formEdit.action = '/bk/model/' + encodeURIComponent(versi) + '/edit-metrik';
-
-      inAkurasi.value = this.getAttribute('data-akurasi') || '';
-      inPresisi.value = this.getAttribute('data-presisi') || '';
-      inRecall.value = this.getAttribute('data-recall') || '';
-      inF1.value = this.getAttribute('data-f1') || '';
-
-      inCmBB.value = this.getAttribute('data-cm-bb') || '';
-      inCmBP.value = this.getAttribute('data-cm-bp') || '';
-      inCmPB.value = this.getAttribute('data-cm-pb') || '';
-      inCmPP.value = this.getAttribute('data-cm-pp') || '';
-    });
-  });
-
-  // Tombol Preset Rekomendasi Cepat
-  document.querySelectorAll('.btn-preset').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      inAkurasi.value = this.getAttribute('data-acc') || '';
-      inPresisi.value = this.getAttribute('data-pre') || '';
-      inRecall.value = this.getAttribute('data-rec') || '';
-      inF1.value = this.getAttribute('data-f1') || '';
-      inCmBB.value = this.getAttribute('data-bb') || '';
-      inCmBP.value = this.getAttribute('data-bp') || '';
-      inCmPB.value = this.getAttribute('data-pb') || '';
-      inCmPP.value = this.getAttribute('data-pp') || '';
-    });
-  });
-});
-</script>
 {% endblock %}
 
 

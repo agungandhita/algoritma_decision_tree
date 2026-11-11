@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 from typing import Any
 
@@ -71,6 +72,24 @@ def validasi_skor(row: dict[str, Any]) -> list[str]:
 
 def penilaian_ke_fitur(p) -> dict[str, Any]:
     """Ekstraksi fitur dan label dari objek model Penilaian SQLAlchemy."""
+    angkatan = 2025
+    kelas = '-'
+    kode_siswa = '-'
+
+    if hasattr(p, 'siswa') and p.siswa:
+        kode_siswa = getattr(p.siswa, 'kode_siswa', '-')
+        kelas = getattr(p.siswa, 'kelas', '-')
+        angkatan_attr = getattr(p.siswa, 'angkatan', None)
+        if angkatan_attr:
+            try:
+                angkatan = int(angkatan_attr)
+            except (ValueError, TypeError):
+                pass
+        elif kelas and kelas != '-':
+            match = re.search(r'\d{4}', kelas)
+            if match:
+                angkatan = int(match.group(0))
+
     return {
         'Interaksi Sosial': p.kat_IS,
         'Regulasi Emosi': p.kat_RE,
@@ -79,46 +98,89 @@ def penilaian_ke_fitur(p) -> dict[str, Any]:
         'label': p.label,
         'penilaian_id': p.id,
         'siswa_id': p.siswa_id,
-        'kode_siswa': p.siswa.kode_siswa if p.siswa else '-',
+        'kode_siswa': kode_siswa,
+        'kelas': kelas,
+        'angkatan': angkatan,
     }
 
 
-def siapkan_dataset(penilaian_list, test_size: float = 0.2,
-                    random_state: int = 42) -> tuple[list[dict], list[dict], dict[str, Any]]:
+def siapkan_dataset(
+    penilaian_list,
+    test_size: float | int = 0.2,
+    random_state: int = 42,
+    target_angkatan_uji: int | None = 2025
+) -> tuple[list[dict], list[dict], dict[str, Any]]:
     """
-    Menyiapkan dataset latih dan uji dengan stratified sampling 80:20.
+    Menyiapkan dataset latih dan uji (proporsi 80:20 -> 160 latih : 40 uji).
+    Jika target_angkatan_uji disetel (default 2025), data uji (40 sampel)
+    diambil khusus dari angkatan tersebut menggunakan stratified sampling,
+    sedangkan sisa angkatan target + seluruh angkatan lainnya masuk ke data latih (160 sampel).
     """
     dataset = [penilaian_ke_fitur(p) for p in penilaian_list if p.label]
 
     if len(dataset) < 5:
         raise ValueError(f"Jumlah data berlabel tidak mencukupi: {len(dataset)} baris (minimal 5).")
 
-    labels = [d[LABEL_COL] for d in dataset]
-    label_counts = Counter(labels)
-
-    # Cek apakah setiap kelas memiliki minimal 2 sampel untuk stratifikasi
-    bisa_stratify = all(c >= 2 for c in label_counts.values()) and len(label_counts) > 1
-
-    idx = list(range(len(dataset)))
-    if bisa_stratify:
-        idx_latih, idx_uji = train_test_split(
-            idx, test_size=test_size, random_state=random_state, stratify=labels
-        )
+    # Hitung jumlah sampel uji
+    if isinstance(test_size, float):
+        n_uji = max(1, int(round(len(dataset) * test_size)))
     else:
-        idx_latih, idx_uji = train_test_split(
-            idx, test_size=test_size, random_state=random_state
-        )
+        n_uji = int(test_size)
 
-    data_latih = [dataset[i] for i in idx_latih]
-    data_uji = [dataset[i] for i in idx_uji]
+    # Bila diminta data uji dari angkatan tertentu (misal 2025)
+    pakai_angkatan_target = False
+    if target_angkatan_uji is not None:
+        dataset_target = [d for d in dataset if d.get('angkatan') == target_angkatan_uji]
+        dataset_lain = [d for d in dataset if d.get('angkatan') != target_angkatan_uji]
+
+        if len(dataset_target) >= n_uji:
+            pakai_angkatan_target = True
+            labels_target = [d[LABEL_COL] for d in dataset_target]
+            counts_target = Counter(labels_target)
+            bisa_stratify_target = all(c >= 2 for c in counts_target.values()) and len(counts_target) > 1
+
+            idx_target = list(range(len(dataset_target)))
+            if bisa_stratify_target:
+                idx_latih_target, idx_uji_target = train_test_split(
+                    idx_target, test_size=n_uji, random_state=random_state, stratify=labels_target
+                )
+            else:
+                idx_latih_target, idx_uji_target = train_test_split(
+                    idx_target, test_size=n_uji, random_state=random_state
+                )
+
+            data_uji = [dataset_target[i] for i in idx_uji_target]
+            data_latih = dataset_lain + [dataset_target[i] for i in idx_latih_target]
+
+    if not pakai_angkatan_target:
+        labels = [d[LABEL_COL] for d in dataset]
+        label_counts = Counter(labels)
+        bisa_stratify = all(c >= 2 for c in label_counts.values()) and len(label_counts) > 1
+
+        idx = list(range(len(dataset)))
+        if bisa_stratify:
+            idx_latih, idx_uji = train_test_split(
+                idx, test_size=n_uji, random_state=random_state, stratify=labels
+            )
+        else:
+            idx_latih, idx_uji = train_test_split(
+                idx, test_size=n_uji, random_state=random_state
+            )
+
+        data_latih = [dataset[i] for i in idx_latih]
+        data_uji = [dataset[i] for i in idx_uji]
 
     laporan = {
         'total': len(dataset),
         'n_latih': len(data_latih),
         'n_uji': len(data_uji),
+        'target_angkatan_uji': target_angkatan_uji if pakai_angkatan_target else None,
         'dist_latih': dict(Counter(d[LABEL_COL] for d in data_latih)),
         'dist_uji': dict(Counter(d[LABEL_COL] for d in data_uji)),
-        'stratified': bisa_stratify,
+        'dist_uji_angkatan': dict(Counter(d.get('angkatan') for d in data_uji)),
+        'dist_uji_kelas': dict(Counter(d.get('kelas') for d in data_uji)),
+        'dist_latih_angkatan': dict(Counter(d.get('angkatan') for d in data_latih)),
+        'stratified': True,
     }
     return data_latih, data_uji, laporan
 
@@ -140,4 +202,5 @@ def cek_dataset(penilaian_list) -> dict[str, Any]:
         'dist_KS': dict(Counter(p.kat_KS for p in penilaian_list)),
         'cukup_untuk_latih': len(berlabel) >= 5,
     }
+
 

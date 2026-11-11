@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+from datetime import date
 from typing import Any
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -22,11 +23,14 @@ from app.ml.c45 import C45Classifier
 from app.ml.preprocess import FITUR, siapkan_dataset
 from app.models import (
     AturanC45,
+    AuditTrail,
     HasilKlasifikasi,
     LogModel,
     Pengamatan,
     Pengguna,
     Penilaian,
+    Periode,
+    RiwayatPenilaian,
     Siswa,
     db,
 )
@@ -51,18 +55,120 @@ def seed():
         # Bersihkan data lama jika ada
         print("2. Membersihkan tabel lama...")
         db.session.execute(db.text("SET FOREIGN_KEY_CHECKS = 0;"))
+        AuditTrail.query.delete()
+        RiwayatPenilaian.query.delete()
         HasilKlasifikasi.query.delete()
         AturanC45.query.delete()
         LogModel.query.delete()
         Pengamatan.query.delete()
         Penilaian.query.delete()
+        Periode.query.delete()
         Siswa.query.delete()
         Pengguna.query.delete()
         db.session.execute(db.text("SET FOREIGN_KEY_CHECKS = 1;"))
         db.session.commit()
 
-        # 3. Akun Pengguna Default
-        print("3. Membuat akun pengguna default...")
+        # 3. Master Periode
+        print("3. Membuat master periode...")
+        daftar_periode = [
+            # Baseline & historis semester
+            {
+                'kode_periode': '2024-01',
+                'nama_periode': 'Januari 2024 (Semester Genap 2023/2024)',
+                'bulan': 1, 'tahun': 2024, 'tahun_ajaran': '2023/2024', 'semester': 'Genap',
+                'tanggal_mulai': date(2024, 1, 1), 'tanggal_selesai': date(2024, 6, 30),
+                'is_active': False, 'deskripsi': 'Periode baseline data penelitian awal SMK Plus Khoiriyah Hasyim'
+            },
+            {
+                'kode_periode': '2024-07',
+                'nama_periode': 'Juli 2024 (Semester Ganjil 2024/2025)',
+                'bulan': 7, 'tahun': 2024, 'tahun_ajaran': '2024/2025', 'semester': 'Ganjil',
+                'tanggal_mulai': date(2024, 7, 1), 'tanggal_selesai': date(2024, 12, 31),
+                'is_active': False, 'deskripsi': 'Periode pemantauan semester ganjil'
+            },
+            {
+                'kode_periode': '2025-01',
+                'nama_periode': 'Januari 2025 (Semester Genap 2024/2025)',
+                'bulan': 1, 'tahun': 2025, 'tahun_ajaran': '2024/2025', 'semester': 'Genap',
+                'tanggal_mulai': date(2025, 1, 1), 'tanggal_selesai': date(2025, 6, 30),
+                'is_active': False, 'deskripsi': 'Periode pemantauan semester genap'
+            },
+            {
+                'kode_periode': '2025-07',
+                'nama_periode': 'Juli 2025 (Semester Ganjil 2025/2026)',
+                'bulan': 7, 'tahun': 2025, 'tahun_ajaran': '2025/2026', 'semester': 'Ganjil',
+                'tanggal_mulai': date(2025, 7, 1), 'tanggal_selesai': date(2025, 12, 31),
+                'is_active': False, 'deskripsi': 'Periode pemantauan semester ganjil'
+            },
+            {
+                'kode_periode': '2026-01',
+                'nama_periode': 'Januari 2026 (Semester Genap 2025/2026)',
+                'bulan': 1, 'tahun': 2026, 'tahun_ajaran': '2025/2026', 'semester': 'Genap',
+                'tanggal_mulai': date(2026, 1, 1), 'tanggal_selesai': date(2026, 6, 30),
+                'is_active': False, 'deskripsi': 'Periode pemantauan semester genap'
+            },
+            {
+                'kode_periode': '2026-07',
+                'nama_periode': 'Juli 2026 (Semester Ganjil 2026/2027)',
+                'bulan': 7, 'tahun': 2026, 'tahun_ajaran': '2026/2027', 'semester': 'Ganjil',
+                'tanggal_mulai': date(2026, 7, 1), 'tanggal_selesai': date(2026, 12, 31),
+                'is_active': False, 'deskripsi': 'Periode transisi tahun ajaran'
+            },
+            # 6 Periode Penelitian Aktif (Oktober 2026 - Maret 2027)
+            {
+                'kode_periode': '2026-10',
+                'nama_periode': 'Oktober 2026 (Periode Penelitian Siklus 1)',
+                'bulan': 10, 'tahun': 2026, 'tahun_ajaran': '2026/2027', 'semester': 'Ganjil',
+                'tanggal_mulai': date(2026, 10, 1), 'tanggal_selesai': date(2026, 10, 31),
+                'is_active': True, 'deskripsi': 'Siklus 1 monitoring kebutuhan pendampingan sosial-emosional'
+            },
+            {
+                'kode_periode': '2026-11',
+                'nama_periode': 'November 2026 (Periode Penelitian Siklus 2)',
+                'bulan': 11, 'tahun': 2026, 'tahun_ajaran': '2026/2027', 'semester': 'Ganjil',
+                'tanggal_mulai': date(2026, 11, 1), 'tanggal_selesai': date(2026, 11, 30),
+                'is_active': True, 'deskripsi': 'Siklus 2 monitoring kebutuhan pendampingan sosial-emosional'
+            },
+            {
+                'kode_periode': '2026-12',
+                'nama_periode': 'Desember 2026 (Periode Penelitian Siklus 3)',
+                'bulan': 12, 'tahun': 2026, 'tahun_ajaran': '2026/2027', 'semester': 'Ganjil',
+                'tanggal_mulai': date(2026, 12, 1), 'tanggal_selesai': date(2026, 12, 31),
+                'is_active': True, 'deskripsi': 'Siklus 3 monitoring kebutuhan pendampingan sosial-emosional'
+            },
+            {
+                'kode_periode': '2027-01',
+                'nama_periode': 'Januari 2027 (Periode Penelitian Siklus 4)',
+                'bulan': 1, 'tahun': 2027, 'tahun_ajaran': '2026/2027', 'semester': 'Genap',
+                'tanggal_mulai': date(2027, 1, 1), 'tanggal_selesai': date(2027, 1, 31),
+                'is_active': True, 'deskripsi': 'Siklus 4 monitoring kebutuhan pendampingan sosial-emosional'
+            },
+            {
+                'kode_periode': '2027-02',
+                'nama_periode': 'Februari 2027 (Periode Penelitian Siklus 5)',
+                'bulan': 2, 'tahun': 2027, 'tahun_ajaran': '2026/2027', 'semester': 'Genap',
+                'tanggal_mulai': date(2027, 2, 1), 'tanggal_selesai': date(2027, 2, 28),
+                'is_active': True, 'deskripsi': 'Siklus 5 monitoring kebutuhan pendampingan sosial-emosional'
+            },
+            {
+                'kode_periode': '2027-03',
+                'nama_periode': 'Maret 2027 (Periode Penelitian Siklus 6)',
+                'bulan': 3, 'tahun': 2027, 'tahun_ajaran': '2026/2027', 'semester': 'Genap',
+                'tanggal_mulai': date(2027, 3, 1), 'tanggal_selesai': date(2027, 3, 31),
+                'is_active': True, 'deskripsi': 'Siklus 6 monitoring kebutuhan pendampingan sosial-emosional'
+            },
+        ]
+
+        periode_map = {}
+        for p_data in daftar_periode:
+            p_obj = Periode(**p_data)
+            db.session.add(p_obj)
+            periode_map[p_data['kode_periode']] = p_obj
+        db.session.commit()
+        print(f"   ✓ {len(daftar_periode)} periode berhasil dibuat.")
+
+        # 4. Akun Pengguna Default
+        print("4. Membuat akun pengguna default...")
         users_data = [
             {
                 'username': 'admin',
@@ -162,8 +268,8 @@ def seed():
         db.session.commit()
         print(f"   ✓ {len(users_data)} pengguna berhasil dibuat.")
 
-        # 4. Import Siswa & Penilaian dari Salinan dari DataSet_2.xlsx
-        print(f"4. Membaca dataset dari {XLSX_PATH}...")
+        # 5. Import Siswa & Penilaian dari Salinan dari DataSet_2.xlsx
+        print(f"5. Membaca dataset dari {XLSX_PATH}...")
         wb = openpyxl.load_workbook(XLSX_PATH, data_only=True)
         ws = wb['Data']
 
@@ -184,9 +290,11 @@ def seed():
             match_th = re.search(r'\d{4}', kelas)
             angkatan = int(match_th.group(0)) if match_th else 2025
             jk = 'L' if no_siswa % 3 != 0 else 'P'
+            nis = f"2023{no_siswa:04d}"
 
             siswa = Siswa(
                 kode_siswa=kode,
+                nomor_induk=nis,
                 nama=nama_asli,
                 kelas=kelas,
                 angkatan=angkatan,
@@ -204,6 +312,7 @@ def seed():
             penilaian = Penilaian(
                 siswa_id=siswa.id,
                 penilai_id=guru_bk.id,
+                periode_id=periode_map['2024-01'].id,
                 periode='2024-01',
                 IS1=IS1, IS2=IS2, IS3=IS3,
                 RE1=RE1, RE2=RE2, RE3=RE3,
@@ -219,9 +328,11 @@ def seed():
         db.session.commit()
         print(f"   ✓ {no_siswa} data siswa & penilaian berhasil disimpan.")
 
-        # 5. Latih model C4.5 awal (80:20 split)
-        print("5. Melatih model C4.5 awal (stratified 80:20)...")
-        data_latih, data_uji, _lap = siapkan_dataset(penilaian_list, test_size=0.2, random_state=42)
+        # 6. Latih model C4.5 awal (stratified 80:20 dengan data uji Angkatan 2025)
+        print("6. Melatih model C4.5 awal (stratified 80:20, data uji Angkatan 2025)...")
+        data_latih, data_uji, _lap = siapkan_dataset(
+            penilaian_list, test_size=0.2, random_state=42, target_angkatan_uji=2025
+        )
 
         versi = "v1.0-baseline"
         clf = C45Classifier(min_samples_split=2, max_depth=10)
@@ -232,7 +343,7 @@ def seed():
         y_pred = [p[0] for p in preds]
         metrik = C45Classifier.evaluasi(y_true, y_pred)
 
-        print(f"   - Hasil Evaluasi Data Uji (n={len(data_uji)}):")
+        print(f"   - Hasil Evaluasi Data Uji Angkatan 2025 (n={len(data_uji)}):")
         print(f"     Akurasi : {metrik['akurasi']*100:.2f}%")
         print(f"     Presisi : {metrik['presisi']*100:.2f}%")
         print(f"     Recall  : {metrik['recall']*100:.2f}%")
@@ -255,19 +366,23 @@ def seed():
             versi_model=versi,
             n_latih=len(data_latih),
             n_uji=len(data_uji),
+            angkatan_uji=2025,
             akurasi=metrik['akurasi'],
             presisi=metrik['presisi'],
             recall=metrik['recall'],
             f1_score=metrik['f1_score'],
             confusion_matrix=json.dumps(metrik['confusion_matrix']),
+            metrik_detail=json.dumps(metrik.get('metrik_per_kelas', {})),
+            pohon_json=json.dumps(clf.pohon_ke_dict()),
             n_aturan=len(clf.aturan),
             kedalaman_pohon=clf.depth(),
             dilatih_oleh=guru_bk.id
         )
         db.session.add(log)
+        db.session.flush()
 
-        # 6. Jalankan klasifikasi awal pada seluruh 200 data
-        print("6. Menyimpan hasil klasifikasi C4.5 untuk 200 siswa...")
+        # 7. Jalankan klasifikasi awal pada seluruh 200 data
+        print("7. Menyimpan hasil klasifikasi C4.5 untuk 200 siswa...")
         for penilaian_item in penilaian_list:
             row_data = {
                 'Interaksi Sosial': penilaian_item.kat_IS,
@@ -276,6 +391,12 @@ def seed():
                 'Kerja Sama': penilaian_item.kat_KS
             }
             pred, path, conf = clf.predict_one(row_data)
+
+            penilaian_item.model_id = log.id
+            penilaian_item.versi_model = versi
+            penilaian_item.prediksi_c45 = pred
+            penilaian_item.kepercayaan_c45 = conf
+
             hk = HasilKlasifikasi(
                 penilaian_id=penilaian_item.id,
                 versi_model=versi,

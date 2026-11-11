@@ -23,6 +23,7 @@ from app.models import (
     LogModel,
     Pengamatan,
     Penilaian,
+    Periode,
     Siswa,
     db,
 )
@@ -34,12 +35,13 @@ kepsek_bp = Blueprint('kepsek', __name__)
 @kepsek_bp.route('/dashboard')
 @kepsek_required
 def dashboard():
-    daftar_periode = [r[0] for r in db.session.query(Penilaian.periode).distinct().order_by(Penilaian.periode.desc()).all() if r[0]]
+    daftar_master_periode = Periode.query.order_by(Periode.tahun.desc(), Periode.bulan.desc()).all()
+    daftar_periode = [p.kode_periode for p in daftar_master_periode]
     periode_terpilih = request.args.get('periode', daftar_periode[0] if daftar_periode else '')
 
-    query_penilaian = Penilaian.query.join(Siswa)
+    query_penilaian = Penilaian.query.join(Siswa, Penilaian.siswa_id == Siswa.id).outerjoin(Periode, Penilaian.periode_id == Periode.id)
     if periode_terpilih:
-        query_penilaian = query_penilaian.filter(Penilaian.periode == periode_terpilih)
+        query_penilaian = query_penilaian.filter((Penilaian.periode_id == periode_terpilih) | (Penilaian.periode == periode_terpilih))
 
     penilaian_list = query_penilaian.all()
 
@@ -83,6 +85,7 @@ def dashboard():
 
     return render_template(
         'kepsek/dashboard.html',
+        daftar_master_periode=daftar_master_periode,
         daftar_periode=daftar_periode,
         periode_terpilih=periode_terpilih,
         total_siswa=total_siswa,
@@ -99,49 +102,15 @@ def dashboard():
     )
 
 
-# ── Catatan Wali Kelas & Guru BK ─────────────────────────────────────────────
+# ── Catatan Wali Kelas & Guru BK (Dibatasi untuk Kepala Sekolah) ─────────────
 @kepsek_bp.route('/catatan')
 @kepsek_required
 def catatan_list():
-    periode = request.args.get('periode', '').strip()
-    kelas = request.args.get('kelas', '').strip()
-    tab_aktif = request.args.get('tab', 'semua').strip()
-
-    daftar_periode = [r[0] for r in db.session.query(Penilaian.periode).distinct().order_by(Penilaian.periode.desc()).all() if r[0]]
-    daftar_kelas = [r[0] for r in db.session.query(Siswa.kelas).distinct().order_by(Siswa.kelas).all() if r[0]]
-
-    # 1. Catatan Pengamatan Wali Kelas
-    q_pengamatan = Pengamatan.query.join(Siswa)
-    if periode:
-        q_pengamatan = q_pengamatan.filter(Pengamatan.periode == periode)
-    if kelas:
-        q_pengamatan = q_pengamatan.filter(Siswa.kelas == kelas)
-    daftar_pengamatan = q_pengamatan.order_by(Pengamatan.created_at.desc()).all()
-
-    # 2. Catatan Peninjauan Guru BK
-    q_bk = HasilKlasifikasi.query.join(Penilaian).join(Siswa).filter(
-        HasilKlasifikasi.catatan_tinjau.isnot(None),
-        HasilKlasifikasi.catatan_tinjau != ''
-    )
-    if periode:
-        q_bk = q_bk.filter(Penilaian.periode == periode)
-    if kelas:
-        q_bk = q_bk.filter(Siswa.kelas == kelas)
-    daftar_tinjauan_bk = q_bk.order_by(HasilKlasifikasi.created_at.desc()).all()
-
-    return render_template(
-        'kepsek/catatan.html',
-        daftar_pengamatan=daftar_pengamatan,
-        daftar_tinjauan_bk=daftar_tinjauan_bk,
-        daftar_periode=daftar_periode,
-        daftar_kelas=daftar_kelas,
-        periode=periode,
-        kelas=kelas,
-        tab_aktif=tab_aktif
-    )
+    flash('Sesuai ketentuan privasi dan metodologi, Kepala Sekolah hanya mengakses dashboard monitoring dan laporan agregat sekolah, tidak diperkenankan mengakses catatan konseling individual siswa.', 'info')
+    return redirect(url_for('kepsek.dashboard'))
 
 
-# ── Laporan Monitoring (PDF & Excel) ─────────────────────────────────────────
+# ── Laporan Monitoring Agregat (PDF & Excel) ─────────────────────────────────
 @kepsek_bp.route('/laporan')
 @kepsek_required
 def laporan_index():
@@ -296,8 +265,7 @@ def penilaian_list():
 @kepsek_bp.route('/penilaian/<id>')
 @kepsek_required
 def penilaian_detail(id):
-    p = Penilaian.query.get_or_404(id)
-    klasifikasi = HasilKlasifikasi.query.filter_by(penilaian_id=p.id).first()
-    return render_template('kepsek/detail_penilaian.html', p=p, klasifikasi=klasifikasi)
+    flash('Detail penilaian individual siswa dibatasi demi privasi bimbingan konseling. Kepala Sekolah mengakses rekapitulasi pada dashboard dan laporan agregat.', 'info')
+    return redirect(url_for('kepsek.dashboard'))
 
 

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Audit Trail Sistem{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Audit Trail & Log Aktivitas</h4>
+    <p class="text-muted small mb-0">Catatan riwayat mutasi data, penambahan, revisi penilaian, dan aktivitas pengguna sistem.</p>
+  </div>
+</div>
+
+<!-- Filter Box -->
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="GET" action="{{ url_for('admin.audit_trail_list') }}" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Jenis Aksi</label>
+        <select name="aksi" class="form-select form-select-sm">
+          <option value="">Semua Aksi</option>
+          {% for a in daftar_aksi %}
+            <option value="{{ a }}" {% if aksi == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Tabel Data</label>
+        <select name="tabel" class="form-select form-select-sm">
+          <option value="">Semua Tabel</option>
+          {% for t in daftar_tabel %}
+            <option value="{{ t }}" {% if tabel == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">Pengguna</label>
+        <select name="user_id" class="form-select form-select-sm">
+          <option value="">Semua Pengguna</option>
+          {% for u in daftar_pengguna %}
+            <option value="{{ u.id }}" {% if user_id == u.id %}selected{% endif %}>{{ u.nama_lengkap }} ({{ u.peran }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-filter"></i> Filter
+        </button>
+        <a href="{{ url_for('admin.audit_trail_list') }}" class="btn btn-outline-secondary btn-sm" title="Reset">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Pengguna</th>
+          <th>Aksi</th>
+          <th>Entitas</th>
+          <th>Keterangan</th>
+          <th>IP & Agen</th>
+          <th class="text-end">Rincian</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in pagination.items %}
+        <tr>
+          <td class="text-nowrap text-muted">{{ a.created_at.strftime('%Y-%m-%d %H:%M:%S') if a.created_at else '-' }}</td>
+          <td>
+            <div class="fw-semibold">{{ a.user_nama or 'Sistem' }}</div>
+            <small class="text-muted">{{ a.user_peran or '-' }}</small>
+          </td>
+          <td>
+            {% if a.aksi == 'TAMBAH' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">TAMBAH</span>
+            {% elif a.aksi == 'REVISI' %}
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle">REVISI</span>
+            {% elif a.aksi == 'HAPUS' %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">HAPUS</span>
+            {% elif a.aksi == 'MIGRASI_DATABASE' %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle">MIGRASI</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary">{{ a.aksi }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <code>{{ a.tabel }}</code>
+            <div class="text-muted" style="font-size: 0.72rem;">ID: {{ a.record_id[:8] }}...</div>
+          </td>
+          <td style="max-width: 280px;" class="text-truncate" title="{{ a.keterangan }}">{{ a.keterangan or '-' }}</td>
+          <td>
+            <div class="text-muted small">{{ a.ip_address or '-' }}</div>
+          </td>
+          <td class="text-end">
+            {% if a.data_lama or a.data_baru %}
+              <button type="button" class="btn btn-xs btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAudit{{ a.id }}">
+                <i class="bi bi-eye"></i> Data
+              </button>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">Belum ada riwayat audit log.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+    <span class="text-muted small">Halaman {{ pagination.page }} dari {{ pagination.pages }}</span>
+    <ul class="pagination pagination-sm mb-0">
+      {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if page_num %}
+          <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.audit_trail_list', page=page_num, aksi=aksi, tabel=tabel, user_id=user_id) }}">{{ page_num }}</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal Modals for Data Inspection -->
+{% for a in pagination.items %}
+{% if a.data_lama or a.data_baru %}
+<div class="modal fade" id="modalAudit{{ a.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold">Rincian Data Mutasi - {{ a.tabel }}:{{ a.record_id }}</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2"><strong>Keterangan:</strong> {{ a.keterangan }}</p>
+        <div class="row g-2">
+          {% if a.data_lama %}
+          <div class="col-md-6">
+            <h6 class="small fw-bold text-danger"><i class="bi bi-dash-circle me-1"></i> Data Sebelum (Snapshot Lama)</h6>
+            <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto;"><code>{{ a.data_lama }}</code></pre>
+          </div>
+          {% endif %}
+          {% if a.data_baru %}
+          <div class="col-md-{{ '6' if a.data_lama else '12' }}">
+            <h6 class="small fw-bold text-success"><i class="bi bi-plus-circle me-1"></i> Data Sesudah (Data Baru)</h6>
+            <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto;"><code>{{ a.data_baru }}</code></pre>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}
+

@@ -55,6 +55,16 @@
               <i class="bi bi-person-lines-fill"></i> Kelola Siswa
             </a>
           </li>
+          <li>
+            <a href="{{ url_for('admin.periode_list') }}" class="nav-link {% if 'admin.periode' in request.endpoint %}active{% endif %}">
+              <i class="bi bi-calendar-range-fill"></i> Kelola Periode
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('admin.audit_trail_list') }}" class="nav-link {% if 'admin.audit_trail' in request.endpoint %}active{% endif %}">
+              <i class="bi bi-journal-code"></i> Audit Trail
+            </a>
+          </li>
 
         {% elif current_user.peran == 'guru_bk' %}
           <li class="sidebar-heading">Menu Bimbingan Konseling</li>
@@ -120,18 +130,8 @@
             </a>
           </li>
           <li>
-            <a href="{{ url_for('kepsek.penilaian_list') }}" class="nav-link {% if 'kepsek.penilaian' in request.endpoint %}active{% endif %}">
-              <i class="bi bi-clipboard2-check"></i> Data Penilaian Siswa
-            </a>
-          </li>
-          <li>
-            <a href="{{ url_for('kepsek.catatan_list') }}" class="nav-link {% if 'kepsek.catatan' in request.endpoint %}active{% endif %}">
-              <i class="bi bi-journal-text"></i> Catatan Wali Kelas & BK
-            </a>
-          </li>
-          <li>
             <a href="{{ url_for('kepsek.laporan_index') }}" class="nav-link {% if 'kepsek.laporan' in request.endpoint %}active{% endif %}">
-              <i class="bi bi-file-earmark-pdf-fill"></i> Cetak Laporan Monitoring
+              <i class="bi bi-file-earmark-bar-graph-fill"></i> Laporan Agregat Monitoring
             </a>
           </li>
         {% endif %}

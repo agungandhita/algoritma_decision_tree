@@ -39,8 +39,9 @@ def login():
 
             login_user(user)
             flash(f'Selamat datang kembali, {user.nama_lengkap}!', 'success')
-            next_page = request.args.get('next')
-            if next_page:
+            next_page = request.args.get('next', '').strip()
+            # Cegah Open Redirect: hanya izinkan path internal yang dimulai dengan satu '/'
+            if next_page and next_page.startswith('/') and not next_page.startswith('//'):
                 return redirect(next_page)
             return _redirect_by_role(user.peran)
         else:

@@ -20,6 +20,12 @@
           {% endif %}
 
           <div class="mb-3">
+            <label for="nomor_induk" class="form-label fw-semibold small">Nomor Induk Siswa (NIS)</label>
+            <input type="text" class="form-control" id="nomor_induk" name="nomor_induk"
+                   value="{{ siswa.nomor_induk if edit and siswa.nomor_induk else '' }}" placeholder="Contoh: 20230001">
+          </div>
+
+          <div class="mb-3">
             <label for="nama" class="form-label fw-semibold small">Nama Lengkap Siswa</label>
             <input type="text" class="form-control" id="nama" name="nama"
                    value="{{ siswa.nama if edit else '' }}" required placeholder="Masukkan nama lengkap siswa">

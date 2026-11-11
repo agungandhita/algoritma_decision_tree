@@ -5,11 +5,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold text-dark mb-1">Detail Penilaian Siswa: {{ p.siswa.kode_siswa }}</h4>
-    <p class="text-muted small mb-0">Rincian 12 indikator skor, konversi kategori aspek, dan hasil klasifikasi model C4.5.</p>
+    <p class="text-muted small mb-0">Rincian 12 indikator skor, konversi kategori aspek, dan pelacakan riwayat revisi multi-periode.</p>
   </div>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('bk.penilaian_edit', id=p.id) }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-pencil me-1"></i> Edit
+    <a href="{{ url_for('bk.penilaian_edit', id=p.id) }}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-pencil-square me-1"></i> Revisi Nilai
     </a>
     <a href="{{ url_for('bk.penilaian_list') }}" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar
@@ -18,11 +18,11 @@
 </div>
 
 <div class="row g-4 mb-4">
-  <!-- Info Siswa & Hasil Rekomendasi -->
+  <!-- Info Siswa & Status Rekomendasi -->
   <div class="col-md-4">
-    <div class="card mb-4">
+    <div class="card mb-4 shadow-sm border-0">
       <div class="card-header bg-white fw-bold">
-        <i class="bi bi-person-badge text-primary me-1"></i> Data Siswa
+        <i class="bi bi-person-badge text-primary me-1"></i> Data Siswa & Periode
       </div>
       <div class="card-body">
         <table class="table table-sm table-borderless mb-0">
@@ -44,20 +44,33 @@
           </tr>
           <tr>
             <td class="text-muted">Periode:</td>
-            <td class="fw-semibold">{{ p.periode }}</td>
+            <td class="fw-semibold">
+              {{ p.periode }}
+              {% if p.periode_rel %}
+                <div class="text-muted small fw-normal">{{ p.periode_rel.nama_periode }}</div>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td class="text-muted">Versi Penilaian:</td>
+            <td>
+              <span class="badge bg-info-subtle text-info border border-info-subtle">
+                Versi {{ p.versi_revisi }} ({{ riwayat_revisi|length }} riwayat arsip)
+              </span>
+            </td>
           </tr>
         </table>
       </div>
     </div>
 
     <!-- Status Hasil Rekomendasi -->
-    <div class="card">
+    <div class="card shadow-sm border-0 mb-4">
       <div class="card-header bg-white fw-bold">
-        <i class="bi bi-diagram-3 text-info me-1"></i> Status Klasifikasi
+        <i class="bi bi-diagram-3 text-info me-1"></i> Status Klasifikasi & Model C4.5
       </div>
       <div class="card-body">
         <div class="mb-3">
-          <small class="text-muted d-block mb-1">Label Guru BK (Ground Truth):</small>
+          <small class="text-muted d-block mb-1">Label Guru BK (Ground Truth Aktual):</small>
           {% if p.label == 'Baik' %}
             <span class="badge badge-baik px-3 py-2 fs-6"><i class="bi bi-check-circle me-1"></i> Baik</span>
           {% elif p.label == 'Perlu Pendampingan' %}
@@ -69,13 +82,18 @@
 
         <div>
           <small class="text-muted d-block mb-1">Prediksi Algoritma C4.5:</small>
-          {% if klasifikasi %}
-            <span class="badge {{ 'badge-baik' if klasifikasi.prediksi == 'Baik' else 'badge-pp' }} px-3 py-2 fs-6 mb-2 d-inline-block">
-              {{ klasifikasi.prediksi }} ({{ '%.1f'|format(klasifikasi.kepercayaan * 100) }}%)
+          {% set pred = p.prediksi_c45 or (klasifikasi.prediksi if klasifikasi else None) %}
+          {% set conf = p.kepercayaan_c45 or (klasifikasi.kepercayaan if klasifikasi else None) %}
+          {% if pred %}
+            <span class="badge {{ 'badge-baik' if pred == 'Baik' else 'badge-pp' }} px-3 py-2 fs-6 mb-2 d-inline-block">
+              {{ pred }} {% if conf %}({{ '%.1f'|format(conf * 100) }}%){% endif %}
             </span>
             <div class="small text-muted">
-              <strong>Aturan C4.5:</strong><br>
-              <code>JIKA {{ klasifikasi.path_aturan }} MAKA {{ klasifikasi.prediksi }}</code>
+              <strong>Model ID / Versi:</strong> <code>{{ p.versi_model or (klasifikasi.versi_model if klasifikasi else '-') }}</code><br>
+              {% if klasifikasi and klasifikasi.path_aturan %}
+                <strong>Aturan C4.5:</strong><br>
+                <code>JIKA {{ klasifikasi.path_aturan }} MAKA {{ klasifikasi.prediksi }}</code>
+              {% endif %}
             </div>
           {% else %}
             <span class="text-muted small">Belum diklasifikasi. Jalankan klasifikasi di menu Klasifikasi.</span>
@@ -87,23 +105,24 @@
 
   <!-- Rincian 4 Aspek dan 12 Indikator -->
   <div class="col-md-8">
-    <div class="card mb-4">
-      <div class="card-header bg-white fw-bold">
-        <i class="bi bi-grid-3x3-gap text-primary me-1"></i> Rekapitulasi 4 Kategori Aspek Perkembangan
+    <div class="card mb-4 shadow-sm border-0">
+      <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-grid-3x3-gap text-primary me-1"></i> Nilai Aktif (Versi {{ p.versi_revisi }})</span>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif Saat Ini</span>
       </div>
       <div class="card-body p-0">
         <table class="table table-bordered mb-0 align-middle">
           <thead class="table-light">
             <tr>
-              <th>Aspek</th>
-              <th>Skor Indikator</th>
+              <th>Aspek Perkembangan</th>
+              <th>Skor 3 Indikator</th>
               <th>Total Skor</th>
               <th>Kategori Aspek</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td class="fw-semibold">Interaksi Sosial</td>
+              <td class="fw-semibold">Interaksi Sosial (IS)</td>
               <td>IS1={{ p.IS1 }}, IS2={{ p.IS2 }}, IS3={{ p.IS3 }}</td>
               <td class="fw-bold">{{ p.total_IS }} / 12</td>
               <td>
@@ -113,7 +132,7 @@
               </td>
             </tr>
             <tr>
-              <td class="fw-semibold">Regulasi Emosi</td>
+              <td class="fw-semibold">Regulasi Emosi (RE)</td>
               <td>RE1={{ p.RE1 }}, RE2={{ p.RE2 }}, RE3={{ p.RE3 }}</td>
               <td class="fw-bold">{{ p.total_RE }} / 12</td>
               <td>
@@ -123,7 +142,7 @@
               </td>
             </tr>
             <tr>
-              <td class="fw-semibold">Empati</td>
+              <td class="fw-semibold">Empati (EM)</td>
               <td>EM1={{ p.EM1 }}, EM2={{ p.EM2 }}, EM3={{ p.EM3 }}</td>
               <td class="fw-bold">{{ p.total_EM }} / 12</td>
               <td>
@@ -133,7 +152,7 @@
               </td>
             </tr>
             <tr>
-              <td class="fw-semibold">Kerja Sama</td>
+              <td class="fw-semibold">Kerja Sama (KS)</td>
               <td>KS1={{ p.KS1 }}, KS2={{ p.KS2 }}, KS3={{ p.KS3 }}</td>
               <td class="fw-bold">{{ p.total_KS }} / 12</td>
               <td>
@@ -147,8 +166,60 @@
       </div>
     </div>
 
+    <!-- Riwayat Revisi Penilaian (Snapshot Historis Tanpa Overwrite) -->
+    <div class="card mb-4 shadow-sm border-0">
+      <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history text-warning me-1"></i> Riwayat Revisi Penilaian (Audit Arsip)</span>
+        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ riwayat_revisi|length }} Revisi Terdokumentasi</span>
+      </div>
+      <div class="card-body p-0">
+        {% if riwayat_revisi %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+              <thead class="table-light">
+                <tr>
+                  <th>Rev #</th>
+                  <th>Direvisi Oleh</th>
+                  <th>Tanggal</th>
+                  <th>Alasan Revisi</th>
+                  <th>Skor (IS/RE/EM/KS)</th>
+                  <th>Kategori</th>
+                  <th>Label / Prediksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in riwayat_revisi %}
+                <tr>
+                  <td><span class="badge bg-secondary">Rev #{{ r.revisi_ke }}</span></td>
+                  <td>{{ r.editor.nama_lengkap if r.editor else 'Pengguna' }}</td>
+                  <td class="text-nowrap text-muted">{{ r.direvisi_pada.strftime('%Y-%m-%d %H:%M') if r.direvisi_pada else '-' }}</td>
+                  <td class="text-dark">{{ r.alasan_revisi or '-' }}</td>
+                  <td><code>{{ r.total_IS }} / {{ r.total_RE }} / {{ r.total_EM }} / {{ r.total_KS }}</code></td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ r.kat_IS }}</span>
+                    <span class="badge bg-light text-dark border">{{ r.kat_RE }}</span>
+                    <span class="badge bg-light text-dark border">{{ r.kat_EM }}</span>
+                    <span class="badge bg-light text-dark border">{{ r.kat_KS }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-primary border">{{ r.label or '-' }}</span> /
+                    <span class="badge bg-light text-info border">{{ r.prediksi_c45 or '-' }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="p-3 text-center text-muted small">
+            <i class="bi bi-check-circle me-1"></i> Penilaian ini masih dalam versi asli (v1.0) dan belum pernah mengalami revisi.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
     <!-- Catatan Observasi Wali Kelas untuk Siswa Ini -->
-    <div class="card mb-4">
+    <div class="card mb-4 shadow-sm border-0">
       <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
         <span><i class="bi bi-journal-text text-primary me-1"></i> Catatan Observasi dari Wali Kelas</span>
         <span class="badge bg-light text-dark border">{{ daftar_pengamatan|length }} Catatan</span>
@@ -186,9 +257,9 @@
 
     <!-- Catatan Peninjauan BK jika ada -->
     {% if klasifikasi %}
-    <div class="card">
+    <div class="card shadow-sm border-0">
       <div class="card-header bg-white fw-bold">
-        <i class="bi bi-chat-square-text text-secondary me-1"></i> Catatan Peninjauan Guru BK
+        <i class="bi bi-chat-square-text text-secondary me-1"></i> Catatan Peninjauan & Tindak Lanjut Guru BK
       </div>
       <div class="card-body">
         <form method="POST" action="{{ url_for('bk.klasifikasi_tinjau', id=klasifikasi.id) }}">
@@ -207,4 +278,3 @@
   </div>
 </div>
 {% endblock %}
-

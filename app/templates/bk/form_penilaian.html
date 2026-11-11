@@ -1,28 +1,38 @@
 {% extends 'base.html' %}
-{% block title %}{{ 'Edit Penilaian Siswa' if edit else 'Input Penilaian Siswa Baru' }}{% endblock %}
+{% block title %}{{ 'Revisi Penilaian Siswa' if edit else 'Input Penilaian Siswa Baru' }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-10">
-    <div class="card mb-4">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div class="card mb-4 shadow-sm border-0">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <div>
-          <h5 class="fw-bold mb-0">{{ 'Edit Penilaian Siswa' if edit else 'Form Penilaian Sosial & Emosional Siswa' }}</h5>
-          <small class="text-muted">Skala Penilaian: 1 = Tidak Pernah, 2 = Jarang, 3 = Sering, 4 = Selalu</small>
+          <h5 class="fw-bold mb-1 text-dark">{{ 'Form Revisi Penilaian Siswa' if edit else 'Form Input Penilaian Sosial-Emosional' }}</h5>
+          <small class="text-muted">Instrumen 4 Aspek & 12 Indikator (Skala 1: Tidak Pernah, 2: Jarang, 3: Sering, 4: Selalu)</small>
         </div>
         <a href="{{ url_for('bk.penilaian_list') }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-left"></i> Kembali
+          <i class="bi bi-arrow-left me-1"></i> Kembali
         </a>
       </div>
 
       <div class="card-body p-4">
+        {% if edit %}
+        <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+          <i class="bi bi-shield-exclamation fs-3 me-3 text-warning"></i>
+          <div>
+            <div class="fw-bold">Akuntabilitas & Audit Trail (Revisi Versi ke-{{ p.versi_revisi }})</div>
+            <div class="small">Sistem SIMONSEM tidak menimpa data secara destruktif. Keadaan nilai sebelum revisi akan otomatis diarsipkan ke tabel riwayat revisi dan dicatat dalam audit trail.</div>
+          </div>
+        </div>
+        {% endif %}
+
         <form method="POST" id="formPenilaian">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <!-- Info Siswa & Periode -->
           <div class="row g-3 mb-4 p-3 bg-light rounded border">
-            <div class="col-md-6">
-              <label for="siswa_id" class="form-label fw-semibold small">Pilih Siswa</label>
+            <div class="col-md-5">
+              <label for="siswa_id" class="form-label fw-semibold small">Siswa <span class="text-danger">*</span></label>
               {% if edit %}
                 <input type="text" class="form-control" value="{{ p.siswa.kode_siswa }} - {{ p.siswa.nama }} ({{ p.siswa.kelas }})" readonly>
                 <input type="hidden" name="siswa_id" value="{{ p.siswa_id }}">
@@ -30,43 +40,62 @@
                 <select class="form-select" id="siswa_id" name="siswa_id" required>
                   <option value="">-- Pilih Siswa --</option>
                   {% for s in daftar_siswa %}
-                    <option value="{{ s.id }}">{{ s.kode_siswa }} - {{ s.nama }} ({{ s.kelas }})</option>
+                    <option value="{{ s.id }}">{{ s.kode_siswa }} - {{ s.nama }} (Kelas {{ s.kelas }} / Angkatan {{ s.angkatan }})</option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <label for="periode_id" class="form-label fw-semibold small">Periode Pemantauan <span class="text-danger">*</span></label>
+              {% if edit %}
+                <input type="text" class="form-control" value="{{ p.periode_rel.nama_periode if p.periode_rel else p.periode }}" readonly>
+                <input type="hidden" name="periode_id" value="{{ p.periode_id or p.periode }}">
+              {% else %}
+                <select class="form-select" id="periode_id" name="periode_id" required>
+                  {% for pr in daftar_master_periode %}
+                    <option value="{{ pr.id }}" {% if pr.is_active %}selected{% endif %}>
+                      {{ pr.nama_periode }} {% if pr.is_active %}(Aktif){% endif %}
+                    </option>
                   {% endfor %}
                 </select>
               {% endif %}
             </div>
 
             <div class="col-md-3">
-              <label for="periode" class="form-label fw-semibold small">Periode Penilaian</label>
-              <input type="text" class="form-control" id="periode" name="periode"
-                     value="{{ p.periode if edit else '2024-01' }}" required placeholder="YYYY-MM">
-            </div>
-
-            <div class="col-md-3">
-              <label for="label" class="form-label fw-semibold small">Label Rekomendasi BK</label>
+              <label for="label" class="form-label fw-semibold small">Label Aktual BK</label>
               <select class="form-select" id="label" name="label">
-                <option value="">-- Ditentukan Nanti / C4.5 --</option>
+                <option value="">-- Prediksi C4.5 Otomatis --</option>
                 <option value="Baik" {% if edit and p.label == 'Baik' %}selected{% endif %}>Baik</option>
                 <option value="Perlu Pendampingan" {% if edit and p.label == 'Perlu Pendampingan' %}selected{% endif %}>Perlu Pendampingan</option>
               </select>
             </div>
+
+            {% if edit %}
+            <div class="col-12 mt-2">
+              <label for="alasan_revisi" class="form-label fw-semibold small text-danger">Alasan / Catatan Revisi <span class="text-danger">*</span></label>
+              <input type="text" class="form-control border-warning" id="alasan_revisi" name="alasan_revisi"
+                     placeholder="Contoh: Koreksi skor indikator EM2 setelah observasi lanjutan bersama wali kelas" required>
+              <div class="form-text small">Wajib diisi sebagai pertanggungjawaban revisi penilaian.</div>
+            </div>
+            {% endif %}
           </div>
 
           <!-- Live Preview Kategori -->
           <div class="card mb-4 bg-info-subtle border-info">
             <div class="card-body py-2 px-3">
               <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 small">
-                <span class="fw-bold text-info-emphasis"><i class="bi bi-calculator me-1"></i> Preview Kategori Otomatis:</span>
-                <div>IS: Total <span id="preview_tot_is" class="fw-bold">0</span> &rarr; <span id="preview_kat_is" class="badge bg-secondary">-</span></div>
-                <div>RE: Total <span id="preview_tot_re" class="fw-bold">0</span> &rarr; <span id="preview_kat_re" class="badge bg-secondary">-</span></div>
-                <div>EM: Total <span id="preview_tot_em" class="fw-bold">0</span> &rarr; <span id="preview_kat_em" class="badge bg-secondary">-</span></div>
-                <div>KS: Total <span id="preview_tot_ks" class="fw-bold">0</span> &rarr; <span id="preview_kat_ks" class="badge bg-secondary">-</span></div>
+                <span class="fw-bold text-info-emphasis"><i class="bi bi-calculator me-1"></i> Preview Kalkulasi Aspek:</span>
+                <div>IS: Total <span id="preview_tot_is" class="fw-bold">{{ p.total_IS if edit else '0' }}</span> &rarr; <span id="preview_kat_is" class="badge bg-secondary">{{ p.kat_IS if edit else '-' }}</span></div>
+                <div>RE: Total <span id="preview_tot_re" class="fw-bold">{{ p.total_RE if edit else '0' }}</span> &rarr; <span id="preview_kat_re" class="badge bg-secondary">{{ p.kat_RE if edit else '-' }}</span></div>
+                <div>EM: Total <span id="preview_tot_em" class="fw-bold">{{ p.total_EM if edit else '0' }}</span> &rarr; <span id="preview_kat_em" class="badge bg-secondary">{{ p.kat_EM if edit else '-' }}</span></div>
+                <div>KS: Total <span id="preview_tot_ks" class="fw-bold">{{ p.total_KS if edit else '0' }}</span> &rarr; <span id="preview_kat_ks" class="badge bg-secondary">{{ p.kat_KS if edit else '-' }}</span></div>
               </div>
             </div>
           </div>
 
           <!-- Aspek 1: Interaksi Sosial -->
-          <div class="card mb-3 border-primary-subtle">
+          <div class="card mb-3 border-primary-subtle shadow-sm">
             <div class="card-header bg-primary text-white py-2">
               <span class="fw-bold">1. Aspek Interaksi Sosial (IS)</span>
               <span class="small float-end">Baik (9–12), Cukup (6–8), Kurang (3–5)</span>
@@ -92,7 +121,7 @@
           </div>
 
           <!-- Aspek 2: Regulasi Emosi -->
-          <div class="card mb-3 border-warning-subtle">
+          <div class="card mb-3 border-warning-subtle shadow-sm">
             <div class="card-header bg-warning text-dark py-2">
               <span class="fw-bold">2. Aspek Regulasi Emosi (RE)</span>
               <span class="small float-end">Stabil (9–12), Labil (3–8)</span>
@@ -118,7 +147,7 @@
           </div>
 
           <!-- Aspek 3: Empati -->
-          <div class="card mb-3 border-success-subtle">
+          <div class="card mb-3 border-success-subtle shadow-sm">
             <div class="card-header bg-success text-white py-2">
               <span class="fw-bold">3. Aspek Empati (EM)</span>
               <span class="small float-end">Tinggi (9–12), Rendah (3–8)</span>
@@ -144,7 +173,7 @@
           </div>
 
           <!-- Aspek 4: Kerja Sama -->
-          <div class="card mb-4 border-info-subtle">
+          <div class="card mb-4 border-info-subtle shadow-sm">
             <div class="card-header bg-info text-white py-2">
               <span class="fw-bold">4. Aspek Kerja Sama (KS)</span>
               <span class="small float-end">Baik (9–12), Kurang (3–8)</span>
@@ -172,7 +201,7 @@
           <div class="d-flex justify-content-between">
             <a href="{{ url_for('bk.penilaian_list') }}" class="btn btn-outline-secondary">Batal</a>
             <button type="submit" class="btn btn-primary px-4">
-              <i class="bi bi-save me-1"></i> {{ 'Simpan Perubahan' if edit else 'Simpan Penilaian' }}
+              <i class="bi bi-save me-1"></i> {{ 'Simpan Revisi (v' ~ (p.versi_revisi + 1) ~ ')' if edit else 'Simpan Penilaian' }}
             </button>
           </div>
         </form>
@@ -181,4 +210,3 @@
   </div>
 </div>
 {% endblock %}
-

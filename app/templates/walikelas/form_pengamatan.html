@@ -24,8 +24,14 @@
           </div>
 
           <div class="mb-3">
-            <label for="periode" class="form-label fw-semibold small">Periode Pengamatan</label>
-            <input type="text" class="form-control" id="periode" name="periode" value="2024-01" required placeholder="YYYY-MM">
+            <label for="periode_id" class="form-label fw-semibold small">Periode Pengamatan</label>
+            <select class="form-select" id="periode_id" name="periode_id" required>
+              {% for pr in daftar_master_periode %}
+                <option value="{{ pr.id }}" {% if pr.is_active %}selected{% endif %}>
+                  {{ pr.nama_periode }} {% if pr.is_active %}(Aktif){% endif %}
+                </option>
+              {% endfor %}
+            </select>
           </div>
 
           <div class="mb-3">

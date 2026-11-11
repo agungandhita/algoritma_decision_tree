@@ -125,10 +125,10 @@ def run_tests():
     print(f"   - POST /auth/login (kepsek) -> Status {res_ks.status_code} ({'OK' if b'Dashboard Eksekutif Kepala Sekolah' in res_ks.data else 'FAIL'})")
     assert b'Dashboard Eksekutif Kepala Sekolah' in res_ks.data
 
-    # Test Kepsek Catatan Wali Kelas & BK
-    res_ks_catatan = test_client.get('/kepsek/catatan')
-    print(f"   - GET /kepsek/catatan -> Status {res_ks_catatan.status_code} ({'OK' if res_ks_catatan.status_code == 200 and b'Catatan Wali Kelas & Guru BK' in res_ks_catatan.data else 'FAIL'})")
-    assert res_ks_catatan.status_code == 200
+    # Test Kepsek Catatan Konseling (Terproteksi Privasi: diredirect ke dashboard)
+    res_ks_catatan = test_client.get('/kepsek/catatan', follow_redirects=True)
+    print(f"   - GET /kepsek/catatan -> Status {res_ks_catatan.status_code} ({'OK' if b'tidak diperkenankan mengakses catatan konseling individual' in res_ks_catatan.data else 'FAIL'})")
+    assert b'tidak diperkenankan mengakses catatan konseling individual' in res_ks_catatan.data
 
     # Test Kepsek Data Penilaian Siswa
     res_ks_penilaian = test_client.get('/kepsek/penilaian')

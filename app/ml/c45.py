@@ -313,7 +313,7 @@ class C45Classifier:
             return 0
         return 1 + max(self._depth_node(c) for c in node.anak.values())
 
-    # ── Serialisasi Pohon untuk Visualisasi HTML/JS ───────────────────────────
+    # ── Serialisasi & Rekonstruksi Pohon untuk Persistensi Database ─────────
     def pohon_ke_dict(self) -> dict:
         if not self.root:
             return {}
@@ -336,6 +336,43 @@ class C45Classifier:
             d['anak'] = {v: self._node_ke_dict(c) for v, c in node.anak.items()}
         return d
 
+    @classmethod
+    def dari_dict(cls, data_dict: dict, versi_model: str = '') -> 'C45Classifier':
+        """Rekonstruksi pohon keputusan C4.5 dari dictionary/JSON tanpa perlu retraining."""
+        clf = cls()
+        clf.versi_model = versi_model
+        if data_dict:
+            clf.root = cls._dict_ke_node(data_dict)
+            clf.aturan = clf._ekstrak_aturan()
+        return clf
+
+    @classmethod
+    def _dict_ke_node(cls, d: dict) -> C45Node:
+        node = C45Node()
+        node.is_leaf = d.get('is_leaf', False)
+        node.depth = d.get('depth', 0)
+        node.n_sampel = d.get('n_sampel', 0)
+        node.distribusi = d.get('distribusi', {})
+        node.entropy = float(d.get('entropy', 0.0))
+        node.nilai_cabang = d.get('nilai_cabang')
+
+        if node.is_leaf:
+            node.prediksi = d.get('prediksi', LABEL_BAIK)
+        else:
+            node.atribut = d.get('atribut')
+            node.gain_ratio = float(d.get('gain_ratio', 0.0))
+            node.anak = {
+                val: cls._dict_ke_node(child_dict)
+                for val, child_dict in d.get('anak', {}).items()
+            }
+            # Simpan prediksi mayoritas simpul non-daun jika ada
+            if node.distribusi:
+                cnt = Counter(node.distribusi)
+                max_val = max(cnt.values())
+                kandidat = [k for k, v in cnt.items() if v == max_val]
+                node.prediksi = POSITIVE_CLASS if POSITIVE_CLASS in kandidat else kandidat[0]
+        return node
+
     # ── Evaluasi Metrik Klasifikasi ──────────────────────────────────────────
     @staticmethod
     def evaluasi(y_true: list[str], y_pred: list[str],
@@ -343,7 +380,8 @@ class C45Classifier:
         n = len(y_true)
         if n == 0:
             return {'akurasi': 0.0, 'presisi': 0.0, 'recall': 0.0, 'f1_score': 0.0,
-                    'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0, 'confusion_matrix': {}, 'n': 0}
+                    'TP': 0, 'FP': 0, 'FN': 0, 'TN': 0, 'confusion_matrix': {}, 'n': 0,
+                    'pos_class': pos_class, 'metrik_per_kelas': {}, 'macro_avg': {}}
 
         TP = sum(1 for t, p in zip(y_true, y_pred) if t == pos_class and p == pos_class)
         FP = sum(1 for t, p in zip(y_true, y_pred) if t != pos_class and p == pos_class)
@@ -367,12 +405,50 @@ class C45Classifier:
             }
         }
 
+        # Metrik untuk kelas 'Baik' (kelas mayoritas / rujukan)
+        TP_baik = matrix[LABEL_BAIK][LABEL_BAIK]
+        FP_baik = matrix[LABEL_PP][LABEL_BAIK]
+        FN_baik = matrix[LABEL_BAIK][LABEL_PP]
+        TN_baik = matrix[LABEL_PP][LABEL_PP]
+
+        pre_baik = TP_baik / (TP_baik + FP_baik) if (TP_baik + FP_baik) > 0 else 0.0
+        rec_baik = TP_baik / (TP_baik + FN_baik) if (TP_baik + FN_baik) > 0 else 0.0
+        f1_baik  = (2 * pre_baik * rec_baik / (pre_baik + rec_baik)) if (pre_baik + rec_baik) > 0 else 0.0
+
+        macro_pre = (presisi + pre_baik) / 2
+        macro_rec = (recall + rec_baik) / 2
+        macro_f1  = (f1 + f1_baik) / 2
+
         return {
             'akurasi': round(akurasi, 4),
             'presisi': round(presisi, 4),
             'recall': round(recall, 4),
             'f1_score': round(f1, 4),
             'TP': TP, 'FP': FP, 'FN': FN, 'TN': TN,
+            'pos_class': pos_class,
+            'penjelasan_kelas_positif': (
+                f"Kelas positif adalah '{pos_class}' karena tujuan utama sistem SIMONSEM "
+                "adalah mendeteksi siswa yang membutuhkan pendampingan konseling sosial-emosional."
+            ),
+            'metrik_per_kelas': {
+                LABEL_PP: {
+                    'TP': TP, 'FP': FP, 'FN': FN, 'TN': TN,
+                    'presisi': round(presisi, 4),
+                    'recall': round(recall, 4),
+                    'f1_score': round(f1, 4),
+                },
+                LABEL_BAIK: {
+                    'TP': TP_baik, 'FP': FP_baik, 'FN': FN_baik, 'TN': TN_baik,
+                    'presisi': round(pre_baik, 4),
+                    'recall': round(rec_baik, 4),
+                    'f1_score': round(f1_baik, 4),
+                },
+            },
+            'macro_avg': {
+                'presisi': round(macro_pre, 4),
+                'recall': round(macro_rec, 4),
+                'f1_score': round(macro_f1, 4),
+            },
             'confusion_matrix': matrix,
             'labels': labels,
             'n': n,

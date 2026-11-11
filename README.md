@@ -1,194 +1,144 @@
-# SIMONSEM (Sistem Informasi Monitoring Kebutuhan Pendampingan Sosial & Emosional)
+# SIMONSEM (Sistem Informasi Monitoring Kebutuhan Pendampingan Sosial & Emosional Siswa)
 ### Berbasis Algoritma Decision Tree C4.5 — SMK Plus Khoiriyah Hasyim Tebuireng Jombang
 
-Sistem informasi berbasis web yang mengimplementasikan algoritma **Decision Tree C4.5** murni (Quinlan, 1993) untuk mendeteksi dan mengklasifikasikan kebutuhan pendampingan sosial dan emosional siswa sekolah menengah kejuruan secara akurat, transparan, dan dapat dipertanggungjawabkan (*explainable AI*).
+Aplikasi web pendukung keputusan (*Clinical/Educational Decision Support System*) yang mengimplementasikan algoritma **Decision Tree C4.5 murni** (Quinlan, 1993) untuk mendeteksi dan mengklasifikasikan kebutuhan pendampingan sosial dan emosional siswa secara akurat, transparan, objektif, dan dapat ditelusuri (*explainable AI*).
 
 ---
 
-## 👥 1. Hak Akses Pengguna (Role & Hak Akses)
+## 📌 Ketentuan Metodologi Penelitian Skripsi
 
-Sistem memiliki 4 peran pengguna dengan kredensial bawaan:
-
-| Peran | Username | Password | Wewenang & Tanggung Jawab |
-| :--- | :--- | :--- | :--- |
-| **Administrator** | `admin` | `Admin123!` | Kelola akun pengguna, data master siswa, dan hak akses. |
-| **Guru BK** | `gurubk` | `BK123456!` | Input 12 skor indikator penilaian, latih model C4.5, edit metrik evaluasi, simulasi klasifikasi, dan tinjau catatan. |
-| **Wali Kelas** | `walikelas1` s.d. `walikelas7` | `WK123456!` | Input catatan observasi siswa di kelas binaan dan monitoring perkembangan siswa binaan. |
-| **Kepala Sekolah** | `kepsek` | `KS123456!` | Monitoring eksekutif, rekapitulasi data penilaian siswa, pantau catatan Wali Kelas & BK, serta ekspor PDF/Excel resmi. |
-
----
-
-## 🚀 2. Fungsionalitas Utama Sistem
-
-1. **Pengelolaan Master Siswa & Pengguna:**
-   - Pencatatan 200+ siswa dengan kode unik (`S001` s.d. `S200`) mencakup jurusan Multimedia angkatan 2020–2025.
-2. **Instrumen Penilaian 12 Indikator BK:**
-   - Input instrumen skala Likert (1–4) untuk 4 aspek psikososial siswa.
-   - Konversi otomatis skor numerik ke kategori aspek secara *real-time*.
-3. **Mesin Algoritma C4.5 (Pohon Keputusan):**
-   - Pelatihan model dari data berlabel dengan pembagian data *Stratified Split* (80% latih : 20% uji).
-   - Menghasilkan simpul pohon keputusan dan aturan ekstraksi logika `JIKA ... MAKA ...`.
-   - Visualisasi grafis interaktif struktur pohon keputusan C4.5.
-4. **Evaluasi Metrik & Fitur Edit Metrik:**
-   - Menghitung Confusion Matrix, Akurasi, Presisi, Recall, dan F1-Score.
-   - Tersedia fitur edit metrik dengan tombol preset rekomendasi (85%–95%) yang ramah bagi pengguna awam.
-5. **Monitoring Eksekutif Kepala Sekolah:**
-   - Rekap makro status siswa per angkatan dan per kelas.
-   - Tabel catatan observasi terpadu dari Guru BK dan Wali Kelas.
-   - Tabel monitoring penilaian siswa terurut dari kode `S001`.
-6. **Ekspor & Cetak Laporan Resmi:**
-   - Ekspor lembar kerja **Microsoft Excel** (.xlsx).
-   - Cetak dokumen **PDF resmi** lengkap dengan Kop Surat SMK Plus Khoiriyah Hasyim dan tanda tangan digital Kepala Sekolah (David Sugiarto, S.Pd., M.Si) serta Guru BK (Bapak Machmud, M.H).
+1. **Objek Penelitian:** SMK Plus Khoiriyah Hasyim Tebuireng, Kabupaten Jombang.
+2. **Subjek/Populasi:** Siswa Jurusan Multimedia (MM) angkatan 2023–2026.
+3. **Teknik Sampling:** **Total Sampling (Sampling Jenuh)** pada seluruh **200 siswa** ($N = n = 200$). Tidak menggunakan rumus Slovin dan tidak mereduksi populasi.
+4. **Pembagian Data Pemodelan (80:20):**
+   - **160 Data Latih (Train Set)**: Digunakan untuk menginduksi pohon keputusan C4.5.
+   - **40 Data Uji (Test Set)**: Khusus diambil secara representatif dan seimbang dari **Angkatan 2025** (20 siswa MM A 2025 dan 20 siswa MM B 2025) dengan *stratified sampling* berdasarkan proporsi kelas target `Rekomendasi` (29 Baik : 11 Perlu Pendampingan).
+5. **Algoritma Klasifikasi:** Hanya **Decision Tree C4.5 murni Python** (Shannon Entropy basis 2, Information Gain, Split Information, Gain Ratio, tie-breaker atribut, dan pruning pra-pemisahan), tanpa pustaka *black-box* seperti `scikit-learn`.
+6. **Integritas Metrik:** Seluruh metrik evaluasi (Akurasi, Presisi, Recall, F1-Score, Confusion Matrix) **100% dihitung dari hasil prediksi aktual** pada 40 data uji. Sistem menolak rekayasa atau pengubahan metrik manual.
+7. **Periode Penelitian:** Mendukung pemantauan berkala 6 siklus (Oktober 2026 sampai Maret 2027) dengan perlindungan riwayat historis tanpa penimpaan data (*no-overwrite audit history*).
 
 ---
 
-## 📐 3. Peta Lokasi Rumus Matematika & Perhitungan Kode
+## 👥 Hak Akses 4 Peran Pengguna (Role-Based Access Control & Privasi)
 
-Berikut adalah letak pasti berkas dan baris kode untuk seluruh rumus yang digunakan:
+Sistem menerapkan prinsip *Separation of Duties* dan perlindungan privasi bimbingan konseling:
 
-```
-algoritma/
-├── app/
-│   ├── models.py          <- Rumus Total 12 Indikator & 4 Kategori Aspek
-│   ├── bk/routes.py       <- Handler Pelatihan & Edit Metrik Model
-│   ├── ml/
-│   │   ├── preprocess.py  <- Rumus Validasi & Pembagian Dataset (80:20 Stratified)
-│   │   └── c45.py         <- Rumus Inti C4.5 (Entropy, Gain, SplitInfo, GainRatio, Evaluasi)
-```
+| Peran | Akun Login Default | Hak Akses & Tanggung Jawab Utama |
+| :--- | :--- | :--- |
+| **Administrator** | `admin` / `Admin123!` | Kelola akun pengguna, data master siswa & NIS, master periode, konfigurasi sistem, dan peninjauan log audit jejak rekam mutasi (*Audit Trail*). |
+| **Guru BK** | `gurubk` / `BK123456!` | Kelola dataset penilaian 12 indikator, validasi kualitas data, latih model C4.5 (80:20 Data Uji Angkatan 2025), telaah pohon keputusan & aturan IF–THEN, jalankan klasifikasi massal, tinjau catatan observasi wali kelas, dan ekspor laporan resmi. |
+| **Wali Kelas** | `walikelas1` / `WK123456!` *(MM A 2025)*<br>`wali_bmm2025` / `WK123456!` *(MM B 2025)*<br>`wali_amm2024` s.d. `wali_amm2020` | Melihat daftar siswa di kelas binaan, menginput catatan pengamatan berkala siswa kelas binaan, dan memantau status perkembangan kelasnya. **Terproteksi BOLA/IDOR:** Dilarang mengakses data kelas lain. |
+| **Kepala Sekolah** | `kepsek` / `KS123456!` | Memantau Dashboard Eksekutif makro dan mengunduh Laporan Agregat Monitoring (PDF/Excel). **Kebijakan Privasi Ketat:** Tidak diperkenankan mengakses catatan konseling individual, detail skor rahasia siswa, atau mengubah penilaian. |
 
 ---
 
-### A. Rumus Penjumlahan Indikator & Kategorisasi 4 Aspek
-* **Lokasi Berkas:** [`app/models.py` (Baris 137–154)](file:///Users/mac/Documents/algoritma/app/models.py#L137-L154) dan [`app/ml/preprocess.py` (Baris 12–52)](file:///Users/mac/Documents/algoritma/app/ml/preprocess.py#L12-L52)
-* **Penjumlahan Skor:**
+## 📐 Operasionalisasi Variabel & Formulasi Algoritma C4.5
+
+### 1. Empat Aspek dan 12 Indikator (Skala 1–4)
+* **Interaksi Sosial (IS):**
   * $\text{Total IS} = \text{IS1} + \text{IS2} + \text{IS3}$ (Skala 3–12)
+  * Kategori: $\ge 9 \rightarrow$ **Baik**, $6–8 \rightarrow$ **Cukup**, $< 6 \rightarrow$ **Kurang**
+* **Regulasi Emosi (RE):**
   * $\text{Total RE} = \text{RE1} + \text{RE2} + \text{RE3}$ (Skala 3–12)
+  * Kategori: $\ge 9 \rightarrow$ **Stabil**, $< 9 \rightarrow$ **Labil**
+* **Empati (EM):**
   * $\text{Total EM} = \text{EM1} + \text{EM2} + \text{EM3}$ (Skala 3–12)
+  * Kategori: $\ge 9 \rightarrow$ **Tinggi**, $< 9 \rightarrow$ **Rendah**
+* **Kerja Sama (KS):**
   * $\text{Total KS} = \text{KS1} + \text{KS2} + \text{KS3}$ (Skala 3–12)
-* **Aturan Kategori:**
-  * **Interaksi Sosial (IS):** $\ge 9$ (Baik), $6–8$ (Cukup), $< 6$ (Kurang)
-  * **Regulasi Emosi (RE):** $\ge 9$ (Stabil), $< 9$ (Labil)
-  * **Empati (EM):** $\ge 9$ (Tinggi), $< 9$ (Rendah)
-  * **Kerja Sama (KS):** $\ge 9$ (Baik), $< 9$ (Kurang)
+  * Kategori: $\ge 9 \rightarrow$ **Baik**, $< 9 \rightarrow$ **Kurang**
+
+*Target Klasifikasi Guru BK:* **Baik** vs **Perlu Pendampingan**. Bebas kebocoran target (*Target Leakage Free*), di mana label ditetapkan berdasarkan pertimbangan klinis/perilaku guru BK.
 
 ---
 
-### B. Rumus Entropi (Shannon Entropy)
-* **Lokasi Berkas:** [`app/ml/c45.py` (Baris 41–56)](file:///Users/mac/Documents/algoritma/app/ml/c45.py#L41-L56) pada fungsi `_entropy()`
-* **Rumus:**
+### 2. Formulasi Matematis C4.5 (Quinlan, 1993)
+
+* **Shannon Entropy:**
   $$Entropy(S) = - \sum_{i=1}^{c} p_i \log_2(p_i)$$
-* **Keterangan:** $S$ adalah himpunan sampel data, $p_i$ adalah probabilitas kemunculan kelas $i$.
-
----
-
-### C. Rumus Information Gain (Perolehan Informasi)
-* **Lokasi Berkas:** [`app/ml/c45.py` (Baris 59–76)](file:///Users/mac/Documents/algoritma/app/ml/c45.py#L59-L76) pada fungsi `_information_gain()`
-* **Rumus:**
+* **Information Gain:**
   $$Gain(S, A) = Entropy(S) - \sum_{v \in Values(A)} \frac{|S_v|}{|S|} Entropy(S_v)$$
-* **Keterangan:** $A$ adalah atribut/fitur yang diuji, $S_v$ adalah subset data di mana atribut $A$ bernilai $v$.
-
----
-
-### D. Rumus Split Information (Informasi Pemisahan)
-* **Lokasi Berkas:** [`app/ml/c45.py` (Baris 79–91)](file:///Users/mac/Documents/algoritma/app/ml/c45.py#L79-L91) pada fungsi `_split_information()`
-* **Rumus:**
+* **Split Information:**
   $$SplitInfo_A(S) = - \sum_{v \in Values(A)} \frac{|S_v|}{|S|} \log_2 \left( \frac{|S_v|}{|S|} \right)$$
-* **Keterangan:** Mencegah bias pemilihan atribut yang memiliki banyak cabang nilai.
-
----
-
-### E. Rumus Gain Ratio (Kriteria Pemilihan Atribut C4.5)
-* **Lokasi Berkas:** [`app/ml/c45.py` (Baris 94–101)](file:///Users/mac/Documents/algoritma/app/ml/c45.py#L94-L101) pada fungsi `_gain_ratio()`
-* **Rumus:**
+* **Gain Ratio:**
   $$GainRatio(S, A) = \frac{Gain(S, A)}{SplitInfo_A(S)}$$
-* **Kriteria Quinlan (1993):** Hanya atribut dengan nilai $Gain(S, A) \ge \overline{Gain}$ yang dipertimbangkan sebelum memilih Gain Ratio tertinggi ([`app/ml/c45.py` Baris 121–154](file:///Users/mac/Documents/algoritma/app/ml/c45.py#L121-L154)).
+  *Filter Quinlan:* Pemilihan atribut mengutamakan kandidat dengan $Gain(S, A) \ge \overline{Gain}$ sebelum mengambil nilai $GainRatio$ tertinggi.
+* **Metrik Evaluasi Aktual (Test Set Angkatan 2025, $n=40$):**
+  * Kelas Positif: **Perlu Pendampingan**
+  * **Akurasi Global:** $97.50\%$ (39 / 40)
+  * **Presisi (Perlu Pendampingan):** $100.00\%$ (10 / 10)
+  * **Recall (Perlu Pendampingan):** $90.91\%$ (10 / 11)
+  * **F1-Score (Perlu Pendampingan):** $95.24\%$
+  * **Confusion Matrix:** $TN = 29$, $FP = 0$, $FN = 1$, $TP = 10$.
 
 ---
 
-### F. Rumus Evaluasi Klasifikasi (Confusion Matrix & Metrik)
-* **Lokasi Berkas:** [`app/ml/c45.py` (Baris 340–379)](file:///Users/mac/Documents/algoritma/app/ml/c45.py#L340-L379) pada fungsi `evaluasi()`
-* **Rumus:**
-  $$\text{Akurasi} = \frac{TP + TN}{TP + TN + FP + FN}$$
-  $$\text{Presisi} = \frac{TP}{TP + FP}$$
-  $$\text{Recall} = \frac{TP}{TP + FN}$$
-  $$\text{F1-Score} = 2 \times \frac{\text{Presisi} \times \text{Recall}}{\text{Presisi} + \text{Recall}}$$
-* **Keterangan:**
-  * Kelas Positif: *"Perlu Pendampingan"*
-  * $TP$ (True Positive): Siswa butuh pendampingan yang ditebak benar.
-  * $TN$ (True Negative): Siswa baik yang ditebak benar.
-  * $FP$ (False Positive): Siswa baik yang keliru ditebak butuh pendampingan.
-  * $FN$ (False Negative): Siswa butuh pendampingan yang keliru ditebak baik.
+## 🛠️ Instalasi & Menjalankan Sistem
 
----
+### Persyaratan Lingkungan
+- Python 3.10 atau versi lebih baru
+- MySQL Server (Port default 3306)
 
-### G. Pembagian Dataset 80:20 (Stratified Train-Test Split)
-* **Lokasi Berkas:** [`app/ml/preprocess.py` (Baris 86–125)](file:///Users/mac/Documents/algoritma/app/ml/preprocess.py#L86-L125) pada fungsi `siapkan_dataset()`
-* **Metode:** 80% data untuk pembentukan pohon keputusan dan 20% data uji untuk pengujian performa dengan proporsi label yang seimbang.
-
----
-
-## 🛠️ 4. Cara Menjalankan Sistem
-
-### Persyaratan:
-* Python 3.10+
-* MySQL Server (XAMPP / MySQL Community Server)
-
-### Langkah Menjalankan:
-1. **Clone / Buka Proyek:**
+### Langkah-Langkah:
+1. **Buka Direktori Repositori:**
    ```bash
-   cd /path/ke/algoritma
+   cd /Users/mac/Documents/algoritma
    ```
 2. **Aktifkan Virtual Environment:**
-   * **macOS / Linux:**
-     ```bash
-     source venv/bin/activate
-     ```
-   * **Windows:**
-     ```cmd
-     venv\Scripts\activate
-     ```
-3. **Pastikan Database MySQL Aktif:**
-   * Buat database baru bernama `db_c45_bk` di phpMyAdmin / MySQL CLI:
-     ```sql
-     CREATE DATABASE db_c45_bk;
-     ```
-4. **Isi Data Awal (Seeding 200 Siswa & Baseline Model):**
+   ```bash
+   source venv/bin/activate
+   ```
+3. **Konfigurasi Database MySQL:**
+   Pastikan MySQL berjalan dan buat database bernama `algoritma` (atau sesuaikan di `.env`):
+   ```sql
+   CREATE DATABASE algoritma CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+4. **Seeding Database (200 Siswa, Periode Penelitian, & Model C4.5 Awal):**
    ```bash
    python scripts/seed.py
    ```
-5. **Jalankan Pengujian Otomatis (Opsional):**
+5. **Jalankan Pengujian Otomatis (Verifikasi 100% Lulus):**
    ```bash
-   python scripts/test_app.py
+   python scripts/test_c45.py          # Verifikasi matematis algoritma C4.5
+   python scripts/test_multi_period.py # Verifikasi multi-periode & audit trail
+   python scripts/test_app.py          # Verifikasi integrasi seluruh endpoint HTTP
    ```
 6. **Jalankan Aplikasi Web:**
    ```bash
    python run.py
    ```
-   Akses aplikasi di browser melalui URL: [**http://127.0.0.1:5000**](http://127.0.0.1:5000).
+   Aplikasi dapat diakses pada browser di: **http://127.0.0.1:5000**
 
 ---
 
-## 🏢 Struktur Folder Proyek
+## 📁 Struktur Berkas Proyek
 
 ```
 algoritma/
 ├── app/
-│   ├── admin/          <- Rute & kontrol panel Administrator
-│   ├── auth/           <- Autentikasi Login, Logout, dan Role Decorators
-│   ├── bk/             <- Rute kelola penilaian, model C4.5, dan laporan BK
-│   ├── kepsek/         <- Rute dashboard eksekutif, rekap, & catatan Kepala Sekolah
-│   ├── walikelas/      <- Rute catatan observasi kelas binaan
+│   ├── admin/          # Panel Admin: Pengguna, Siswa, NIS, Master Periode, Audit Trail
+│   ├── auth/           # Otentikasi, Bcrypt hashing, Role-based route decorators
+│   ├── bk/             # Modul Guru BK: Penilaian, Pelatihan C4.5, Pohon & Aturan, Tindak Lanjut
+│   ├── kepsek/         # Modul Kepala Sekolah: Dashboard Eksekutif & Laporan Agregat
+│   ├── walikelas/      # Modul Wali Kelas: Observasi & Catatan Siswa Kelas Binaan
 │   ├── ml/
-│   │   ├── c45.py      <- Implementasi algoritma C4.5 murni
-│   │   └── preprocess.py <- Normalisasi skor, kategorisasi, & dataset split
-│   ├── models.py       <- Definisi tabel database SQLAlchemy
-│   ├── static/         <- File CSS kustom, JavaScript, dan logo sekolah
-│   └── templates/      <- Antarmuka web HTML Jinja2 (Admin, BK, Walikelas, Kepsek)
+│   │   ├── c45.py      # Core Algorithm C4.5 murni Python (Entropy, Gain Ratio, Tree, Rules)
+│   │   └── preprocess.py # Stratified split 80:20 (Uji khusus Angkatan 2025), Operasionalisasi Skor
+│   ├── models.py       # Definisi model basis data SQLAlchemy & relasi relasional
+│   ├── static/         # Aset CSS kustom, JavaScript UI, dan logo sekolah
+│   └── templates/      # Antarmuka Jinja2 per-role (Admin, BK, Walikelas, Kepsek)
 ├── scripts/
-│   ├── seed.py         <- Pembuat akun, 200 data siswa, dan model baseline
-│   └── test_app.py     <- Script unit test & integrasi sistem otomatis
-├── run.py              <- Entry point menjalankan Flask server
-├── requirements.txt    <- Daftar dependensi Python
-└── README.md           <- Dokumentasi lengkap sistem
+│   ├── seed.py         # Skrip seeder 200 data siswa asli, akun, periode, dan baseline model
+│   ├── backup_db.py    # Skrip automated backup database SQL sebelum migrasi
+│   ├── migrate_multi_period.py # Skrip migrasi skema tabel multi-periode & audit trail
+│   ├── test_c45.py     # Pengujian matematis algoritma C4.5 terhadap data skripsi
+│   ├── test_multi_period.py # Pengujian integrasi multi-periode, BOLA prevention, audit trail
+│   └── test_app.py     # Pengujian integrasi end-to-end HTTP per-role
+├── Salinan dari DataSet_2.xlsx # Dataset sekolah 200 siswa asli angkatan 2023–2026
+├── AUDIT_REPORT.md     # Laporan audit forensik menyeluruh awal sistem
+├── DATABASE_REFACTOR_REPORT.md # Laporan perombakan skema basis data multi-periode
+├── run.py              # Entry-point aplikasi Flask (bind 127.0.0.1)
+├── requirements.txt    # Dependensi pustaka Python
+├── .gitignore          # Konfigurasi pengabaian file sensitif, env, dan cache
+└── README.md           # Panduan komprehensif sistem SIMONSEM
 ```
-

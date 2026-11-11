@@ -5,7 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from app.auth.decorators import walikelas_required
-from app.models import Pengamatan, Penilaian, Siswa, db
+from app.models import Pengamatan, Penilaian, Periode, Siswa, catat_audit, db
 
 walikelas_bp = Blueprint('walikelas', __name__)
 
@@ -87,8 +87,18 @@ def siswa_detail(id):
 @walikelas_bp.route('/pengamatan')
 @walikelas_required
 def pengamatan_list():
-    daftar_pengamatan = Pengamatan.query.filter_by(pengamat_id=current_user.id).order_by(Pengamatan.created_at.desc()).all()
-    return render_template('walikelas/pengamatan.html', daftar_pengamatan=daftar_pengamatan)
+    periode_input = request.args.get('periode', '').strip()
+    query = Pengamatan.query.filter_by(pengamat_id=current_user.id)
+    if periode_input:
+        query = query.filter((Pengamatan.periode_id == periode_input) | (Pengamatan.periode == periode_input))
+    daftar_pengamatan = query.order_by(Pengamatan.created_at.desc()).all()
+    daftar_master_periode = Periode.query.order_by(Periode.tahun.desc(), Periode.bulan.desc()).all()
+    return render_template(
+        'walikelas/pengamatan.html',
+        daftar_pengamatan=daftar_pengamatan,
+        daftar_master_periode=daftar_master_periode,
+        periode=periode_input
+    )
 
 
 @walikelas_bp.route('/pengamatan/tambah', methods=['GET', 'POST'])
@@ -96,31 +106,74 @@ def pengamatan_list():
 def pengamatan_tambah():
     kelas_diampu = current_user.kelas_diampu or ''
     daftar_siswa = Siswa.query.filter_by(kelas=kelas_diampu, is_active=True).order_by(Siswa.kode_siswa).all()
+    daftar_master_periode = Periode.query.order_by(Periode.is_active.desc(), Periode.tahun.desc(), Periode.bulan.desc()).all()
+    periode_aktif = Periode.query.filter_by(is_active=True).first() or (daftar_master_periode[0] if daftar_master_periode else None)
 
     if request.method == 'POST':
         siswa_id = request.form.get('siswa_id', '').strip()
-        periode = request.form.get('periode', '').strip() or datetime.now().strftime('%Y-%m')
+        periode_input = request.form.get('periode_id', '').strip() or request.form.get('periode', '').strip()
         catatan = request.form.get('catatan', '').strip()
         skor_perilaku = request.form.get('skor_perilaku', type=int)
 
         if not siswa_id or not catatan:
             flash('Siswa dan catatan pengamatan wajib diisi.', 'danger')
-            return render_template('walikelas/form_pengamatan.html', daftar_siswa=daftar_siswa)
+            return render_template(
+                'walikelas/form_pengamatan.html',
+                daftar_siswa=daftar_siswa,
+                daftar_master_periode=daftar_master_periode,
+                periode_aktif=periode_aktif
+            )
+
+        # Proteksi BOLA: Verifikasi siswa harus berada di kelas yang diampu wali kelas saat ini
+        siswa = Siswa.query.get(siswa_id)
+        if not siswa or siswa.kelas != kelas_diampu:
+            flash('Akses ditolak: Anda hanya dapat menambahkan pengamatan untuk siswa di kelas binaan Anda.', 'danger')
+            return redirect(url_for('walikelas.pengamatan_list'))
+
+        periode_obj = None
+        if periode_input:
+            periode_obj = Periode.query.get(periode_input) or Periode.query.filter_by(kode_periode=periode_input).first()
+        if not periode_obj:
+            periode_obj = periode_aktif
 
         pengamatan = Pengamatan(
-            siswa_id=siswa_id,
+            siswa_id=siswa.id,
             pengamat_id=current_user.id,
-            periode=periode,
+            periode_id=periode_obj.id if periode_obj else None,
+            periode=periode_obj.kode_periode if periode_obj else datetime.now().strftime('%Y-%m'),
             catatan=catatan,
             skor_perilaku=skor_perilaku
         )
         db.session.add(pengamatan)
+
+        catat_audit(
+            aksi='TAMBAH',
+            tabel='pengamatan',
+            record_id=pengamatan.id,
+            data_baru={
+                'siswa_id': pengamatan.siswa_id,
+                'kode_siswa': siswa.kode_siswa,
+                'periode': pengamatan.periode,
+                'skor_perilaku': pengamatan.skor_perilaku,
+                'catatan': pengamatan.catatan
+            },
+            keterangan=f"Wali kelas {current_user.nama_lengkap} menambahkan pengamatan siswa {siswa.kode_siswa} periode {pengamatan.periode}",
+            user=current_user,
+            ip_address=request.remote_addr,
+            user_agent=request.user_agent.string
+        )
+
         db.session.commit()
 
-        flash('Catatan pengamatan berhasil disimpan sebagai pembanding.', 'success')
+        flash('Catatan pengamatan berhasil disimpan dan ditautkan ke periode pemantauan.', 'success')
         return redirect(url_for('walikelas.pengamatan_list'))
 
-    return render_template('walikelas/form_pengamatan.html', daftar_siswa=daftar_siswa)
+    return render_template(
+        'walikelas/form_pengamatan.html',
+        daftar_siswa=daftar_siswa,
+        daftar_master_periode=daftar_master_periode,
+        periode_aktif=periode_aktif
+    )
 
 
 @walikelas_bp.route('/hasil-kelas')
