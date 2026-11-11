@@ -31,7 +31,7 @@ def dashboard():
     total_periode = Periode.query.count()
     total_audit = AuditTrail.query.count()
 
-    # Status Kelengkapan Dataset Penelitian (Total Sampling 200 Siswa)
+    # Status Kelengkapan Data Siswa (200 Siswa Terdaftar)
     siswa_dinilai = db.session.query(Penilaian.siswa_id).distinct().count()
     persen_kelengkapan = round((siswa_dinilai / total_siswa * 100), 1) if total_siswa > 0 else 0
     penilaian_berlabel = Penilaian.query.filter(Penilaian.label.isnot(None)).count()
@@ -42,7 +42,7 @@ def dashboard():
         'persentase': persen_kelengkapan,
         'penilaian_berlabel': penilaian_berlabel,
         'is_lengkap': (siswa_dinilai >= total_siswa and total_siswa > 0),
-        'status_teks': 'Lengkap (Total Sampling 200 Siswa Terpenuhi)' if siswa_dinilai >= total_siswa else 'Sebagian Terisi'
+        'status_teks': 'Data Lengkap (100% Terdata)' if siswa_dinilai >= total_siswa else 'Sebagian Terisi'
     }
 
     pengguna_terbaru = Pengguna.query.order_by(Pengguna.created_at.desc()).limit(5).all()

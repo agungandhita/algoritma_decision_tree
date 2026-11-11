@@ -46,8 +46,8 @@ def test_ui_consistency():
         assert "SIMONSEM" in html
         assert "Total Siswa" in html
         assert "200" in html
-        assert "Status Kelengkapan Dataset Penelitian" in html
-        assert "Total Sampling 200 Siswa Terpenuhi" in html
+        assert "Status Kelengkapan Data Siswa" in html
+        assert "Data Lengkap (100% Terdata)" in html
         assert "Aktivitas Sistem Terbaru" in html
         print("  [PASS] Dashboard Admin menampilkan 6 metrik, kelengkapan dataset 100%, dan audit log.")
 

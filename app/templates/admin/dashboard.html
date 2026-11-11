@@ -28,7 +28,7 @@
         <div>
           <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Total Siswa</span>
           <h3 class="fw-bold mb-0 text-dark">{{ total_siswa }}</h3>
-          <small class="text-success fw-semibold" style="font-size: 0.72rem;"><i class="bi bi-check-circle-fill"></i> Total Sampling</small>
+          <small class="text-success fw-semibold" style="font-size: 0.72rem;"><i class="bi bi-check-circle-fill"></i> Siswa Terdaftar</small>
         </div>
         <div class="bg-primary-subtle text-primary rounded-3 p-2 fs-5">
           <i class="bi bi-person-lines-fill"></i>
@@ -113,7 +113,7 @@
   </div>
 </div>
 
-<!-- 2. Status Kelengkapan Dataset Penelitian -->
+<!-- 2. Status Kelengkapan Data Siswa & Penilaian -->
 <div class="card shadow-sm border-0 mb-4">
   <div class="card-body p-4">
     <div class="row align-items-center g-3">
@@ -122,11 +122,11 @@
           <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
             <i class="bi bi-shield-check me-1"></i> {{ status_kelengkapan.status_teks }}
           </span>
-          <span class="badge bg-light text-secondary border">Total Sampling (Sampling Jenuh)</span>
+          <span class="badge bg-light text-secondary border">SMK Plus Khoiriyah Hasyim Tebuireng</span>
         </div>
-        <h5 class="fw-bold text-dark mb-1">Status Kelengkapan Dataset Penelitian Skripsi</h5>
+        <h5 class="fw-bold text-dark mb-1">Status Kelengkapan Data Siswa & Penilaian</h5>
         <p class="text-muted small mb-3">
-          Objek: <strong>SMK Plus Khoiriyah Hasyim Tebuireng</strong> (Angkatan 2023–2026). Seluruh <strong>{{ status_kelengkapan.populasi_total }} siswa</strong> terdaftar lengkap dalam basis data dengan 12 skor variabel indikator (rentang 1–4) dan kategori 4 aspek sosial-emosional tanpa sampel acak Slovin.
+          Basis data SIMONSEM memuat <strong>{{ status_kelengkapan.populasi_total }} siswa</strong> (Angkatan 2023–2026) terdaftar lengkap beserta 12 indikator perkembangan sosial dan emosional.
         </p>
         <div class="d-flex align-items-center gap-3">
           <div class="progress flex-grow-1" style="height: 10px;">
@@ -139,7 +139,7 @@
       <div class="col-lg-4 border-start-lg ps-lg-4">
         <div class="d-flex flex-column gap-2 small">
           <div class="d-flex justify-content-between">
-            <span class="text-muted">Populasi & Sampel Penelitian:</span>
+            <span class="text-muted">Total Siswa Terdaftar:</span>
             <span class="fw-bold text-dark">{{ status_kelengkapan.populasi_total }} Siswa</span>
           </div>
           <div class="d-flex justify-content-between">
@@ -147,12 +147,12 @@
             <span class="fw-bold text-success">{{ status_kelengkapan.siswa_dinilai }} Siswa (100%)</span>
           </div>
           <div class="d-flex justify-content-between">
-            <span class="text-muted">Penilaian Berlabel Target:</span>
+            <span class="text-muted">Penilaian Lengkap Tervalidasi:</span>
             <span class="fw-bold text-primary">{{ status_kelengkapan.penilaian_berlabel }} Siswa</span>
           </div>
           <div class="d-flex justify-content-between">
-            <span class="text-muted">Metrik Model C4.5:</span>
-            <span class="badge bg-secondary">Terkunci (Hanya Guru BK)</span>
+            <span class="text-muted">Model C4.5:</span>
+            <span class="badge bg-secondary">Dikelola Guru BK</span>
           </div>
         </div>
       </div>

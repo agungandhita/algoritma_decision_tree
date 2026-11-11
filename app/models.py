@@ -544,11 +544,98 @@ class AuditTrail(BaseModel):
     def __repr__(self):
         return f'<AuditTrail [{self.aksi}] on {self.tabel}:{self.record_id} by {self.user_nama}>'
 
+    @property
+    def data_lama_dict(self) -> dict:
+        if not self.data_lama:
+            return {}
+        try:
+            val = json.loads(self.data_lama)
+            return val if isinstance(val, dict) else {}
+        except Exception:
+            return {}
+
+    @property
+    def data_baru_dict(self) -> dict:
+        if not self.data_baru:
+            return {}
+        try:
+            val = json.loads(self.data_baru)
+            return val if isinstance(val, dict) else {}
+        except Exception:
+            return {}
+
+    def get_rincian_perubahan(self) -> list[dict]:
+        """Menyajikan rincian perubahan atribut dalam format yang ramah dibaca manusia."""
+        KAMUS_LABEL = {
+            'kode_siswa': 'Kode Siswa',
+            'nama_siswa': 'Nama Siswa',
+            'nama': 'Nama Siswa',
+            'kelas': 'Kelas Rombel',
+            'angkatan': 'Tahun Angkatan',
+            'periode': 'Periode Pemantauan',
+            'skor_perilaku': 'Skor Perilaku Umum (1-5)',
+            'catatan': 'Catatan Pengamatan Wali Kelas',
+            'alasan_revisi': 'Alasan Revisi Nilai',
+            'revisi_ke': 'Revisi Ke-',
+            'label': 'Rekomendasi (Label)',
+            'kat_IS': 'Kategori Interaksi Sosial',
+            'total_IS': 'Total Skor Interaksi Sosial',
+            'kat_RE': 'Kategori Regulasi Emosi',
+            'total_RE': 'Total Skor Regulasi Emosi',
+            'kat_EM': 'Kategori Empati',
+            'total_EM': 'Total Skor Empati',
+            'kat_KS': 'Kategori Kerja Sama',
+            'total_KS': 'Total Skor Kerja Sama',
+            'is_active': 'Status Aktif / Nonaktif',
+            'nama_lengkap': 'Nama Lengkap Pengguna',
+            'username': 'Username Akun',
+            'peran': 'Hak Akses / Peran',
+            'nama_kelas': 'Nama Rombel / Kelas',
+            'wali_kelas': 'Wali Kelas',
+            'jurusan': 'Kompetensi Keahlian',
+            'tingkat': 'Tingkat Kelas',
+            'tahun_ajaran': 'Tahun Ajaran',
+            'semester': 'Semester',
+            'IS1': 'Indikator IS-1', 'IS2': 'Indikator IS-2', 'IS3': 'Indikator IS-3',
+            'RE1': 'Indikator RE-1', 'RE2': 'Indikator RE-2', 'RE3': 'Indikator RE-3',
+            'EM1': 'Indikator EM-1', 'EM2': 'Indikator EM-2', 'EM3': 'Indikator EM-3',
+            'KS1': 'Indikator KS-1', 'KS2': 'Indikator KS-2', 'KS3': 'Indikator KS-3',
+        }
+
+        IGNORED_KEYS = {'id', 'siswa_id', 'penilai_id', 'pengamat_id', 'periode_id', 'model_id', 'password_hash'}
+
+        dl = self.data_lama_dict
+        db_ = self.data_baru_dict
+
+        all_keys = list(dict.fromkeys(list(dl.keys()) + list(db_.keys())))
+        hasil = []
+
+        for k in all_keys:
+            if k in IGNORED_KEYS:
+                continue
+            val_lama = dl.get(k)
+            val_baru = db_.get(k)
+            label = KAMUS_LABEL.get(k, k.replace('_', ' ').title())
+
+            if k == 'is_active':
+                val_lama = 'Aktif' if val_lama else ('Nonaktif' if val_lama is not None else '-')
+                val_baru = 'Aktif' if val_baru else ('Nonaktif' if val_baru is not None else '-')
+
+            hasil.append({
+                'kunci': k,
+                'label': label,
+                'lama': str(val_lama) if val_lama is not None else '-',
+                'baru': str(val_baru) if val_baru is not None else '-',
+                'berubah': (val_lama != val_baru) and (val_lama is not None)
+            })
+
+        return hasil
+
 
 def catat_audit(
     aksi: str,
     tabel: str,
-    record_id: str,
+    record_id: Any,
     data_lama: Any = None,
     data_baru: Any = None,
     keterangan: str | None = None,
@@ -563,6 +650,7 @@ def catat_audit(
 
     lama_str = json.dumps(data_lama, default=str) if data_lama is not None else None
     baru_str = json.dumps(data_baru, default=str) if data_baru is not None else None
+    clean_record_id = str(record_id) if record_id and str(record_id).strip() not in ('None', '') else gen_uuid()
 
     entry = AuditTrail(
         user_id=u_id,
@@ -570,7 +658,7 @@ def catat_audit(
         user_peran=u_peran,
         aksi=aksi,
         tabel=tabel,
-        record_id=str(record_id),
+        record_id=clean_record_id,
         data_lama=lama_str,
         data_baru=baru_str,
         keterangan=keterangan,

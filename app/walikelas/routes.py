@@ -162,6 +162,7 @@ def pengamatan_tambah():
             skor_perilaku=skor_perilaku
         )
         db.session.add(pengamatan)
+        db.session.flush()
 
         catat_audit(
             aksi='TAMBAH',

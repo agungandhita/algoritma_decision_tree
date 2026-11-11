@@ -88,8 +88,8 @@
             {% endif %}
           </td>
           <td>
-            <code>{{ a.tabel }}</code>
-            <div class="text-muted" style="font-size: 0.72rem;">ID: {{ a.record_id[:8] }}...</div>
+            <span class="badge bg-light text-dark border">{{ a.tabel|capitalize }}</span>
+            <div class="text-muted font-monospace" style="font-size: 0.72rem;">ID: {{ (a.record_id[:8] ~ '...') if a.record_id and a.record_id != 'None' else '-' }}</div>
           </td>
           <td style="max-width: 280px;" class="text-truncate" title="{{ a.keterangan }}">{{ a.keterangan or '-' }}</td>
           <td>
@@ -98,7 +98,7 @@
           <td class="text-end">
             {% if a.data_lama or a.data_baru %}
               <button type="button" class="btn btn-xs btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAudit{{ a.id }}">
-                <i class="bi bi-eye"></i> Data
+                <i class="bi bi-eye me-1"></i> Rincian
               </button>
             {% else %}
               <span class="text-muted">-</span>
@@ -137,28 +137,108 @@
 {% for a in pagination.items %}
 {% if a.data_lama or a.data_baru %}
 <div class="modal fade" id="modalAudit{{ a.id }}" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h6 class="modal-title fw-bold">Rincian Data Mutasi - {{ a.tabel }}:{{ a.record_id }}</h6>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-light py-3">
+        <div>
+          <h6 class="modal-title fw-bold text-dark mb-0">
+            <i class="bi bi-clock-history text-primary me-2"></i>Rincian Mutasi Data: {{ a.tabel|capitalize }}
+          </h6>
+          <small class="text-muted">Waktu Pencatatan: {{ a.created_at.strftime('%d-%m-%Y %H:%M:%S') if a.created_at else '-' }}</small>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <p class="small text-muted mb-2"><strong>Keterangan:</strong> {{ a.keterangan }}</p>
-        <div class="row g-2">
-          {% if a.data_lama %}
-          <div class="col-md-6">
-            <h6 class="small fw-bold text-danger"><i class="bi bi-dash-circle me-1"></i> Data Sebelum (Snapshot Lama)</h6>
-            <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto;"><code>{{ a.data_lama }}</code></pre>
+      <div class="modal-body p-4">
+        <!-- Kotak Ringkasan Aktivitas -->
+        <div class="p-3 bg-light rounded border mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+            <div>
+              <span class="text-muted small">Eksekutor:</span>
+              <strong class="text-dark">{{ a.user_nama or 'Sistem' }}</strong>
+              <span class="badge bg-secondary-subtle text-secondary border ms-1">{{ a.user_peran or '-' }}</span>
+            </div>
+            <div>
+              <span class="text-muted small me-1">Jenis Aksi:</span>
+              {% if a.aksi == 'TAMBAH' %}
+                <span class="badge bg-success">TAMBAH DATA</span>
+              {% elif a.aksi == 'REVISI' %}
+                <span class="badge bg-warning text-dark">REVISI NILAI</span>
+              {% elif a.aksi == 'HAPUS' %}
+                <span class="badge bg-danger">HAPUS DATA</span>
+              {% elif a.aksi == 'UBAH_STATUS' %}
+                <span class="badge bg-info text-dark">UBAH STATUS</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ a.aksi }}</span>
+              {% endif %}
+            </div>
           </div>
-          {% endif %}
-          {% if a.data_baru %}
-          <div class="col-md-{{ '6' if a.data_lama else '12' }}">
-            <h6 class="small fw-bold text-success"><i class="bi bi-plus-circle me-1"></i> Data Sesudah (Data Baru)</h6>
-            <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto;"><code>{{ a.data_baru }}</code></pre>
+          <div class="small">
+            <span class="text-muted">Keterangan:</span>
+            <span class="text-dark fw-medium">{{ a.keterangan or '-' }}</span>
           </div>
-          {% endif %}
         </div>
+
+        <!-- Tabel Perubahan Ramah Pengguna -->
+        {% set rincian = a.get_rincian_perubahan() %}
+        {% if rincian %}
+        <h6 class="fw-bold small text-dark mb-2"><i class="bi bi-card-checklist text-primary me-1"></i> Data yang Dicatat / Diperbarui:</h6>
+        <div class="table-responsive mb-3">
+          <table class="table table-sm table-bordered table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 35%;">Informasi / Kolom Data</th>
+                {% if a.data_lama %}
+                <th style="width: 32.5%;">Nilai Sebelumnya (Lama)</th>
+                <th style="width: 32.5%;">Nilai Baru (Sesudah)</th>
+                {% else %}
+                <th>Nilai Data yang Diinputkan</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in rincian %}
+              <tr class="{% if item.berubah %}table-warning{% endif %}">
+                <td class="fw-semibold text-dark">{{ item.label }}</td>
+                {% if a.data_lama %}
+                <td class="text-muted">{{ item.lama }}</td>
+                <td class="fw-bold text-success">{{ item.baru }}</td>
+                {% else %}
+                <td class="fw-medium text-dark">{{ item.baru }}</td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        <!-- Accordion Toggle untuk Data Teknis (JSON Mentah) jika diperlukan tim teknis -->
+        <div class="accordion accordion-flush border rounded" id="accTeknis{{ a.id }}">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed py-2 px-3 small text-muted bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#colTeknis{{ a.id }}">
+                <i class="bi bi-code-slash me-2"></i> Tampilkan Log Teknis Mentah (JSON Payload)
+              </button>
+            </h2>
+            <div id="colTeknis{{ a.id }}" class="accordion-collapse collapse p-3 bg-light">
+              <div class="row g-2">
+                {% if a.data_lama %}
+                <div class="col-md-6">
+                  <span class="small fw-semibold text-danger">Data Lama (JSON):</span>
+                  <pre class="bg-white p-2 rounded border small text-muted mb-0" style="max-height: 180px; overflow-y: auto;"><code>{{ a.data_lama }}</code></pre>
+                </div>
+                {% endif %}
+                {% if a.data_baru %}
+                <div class="col-md-{{ '6' if a.data_lama else '12' }}">
+                  <span class="small fw-semibold text-success">Data Baru (JSON):</span>
+                  <pre class="bg-white p-2 rounded border small text-muted mb-0" style="max-height: 180px; overflow-y: auto;"><code>{{ a.data_baru }}</code></pre>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
