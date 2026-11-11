@@ -64,7 +64,43 @@ class Pengguna(UserMixin, BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. SISWA (Students)
+# 2. KELAS (Classes)
+# ─────────────────────────────────────────────────────────────────────────────
+class Kelas(BaseModel):
+    __tablename__ = 'kelas'
+
+    id            = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    nama_kelas    = db.Column(db.String(30), unique=True, nullable=False, index=True)  # e.g. "MM A 2025"
+    tingkat       = db.Column(db.String(10), nullable=True)                            # e.g. "X", "XI", "XII"
+    jurusan       = db.Column(db.String(50), default="Multimedia", nullable=False)     # "Multimedia"
+    angkatan      = db.Column(db.Integer, nullable=False, index=True)                  # e.g. 2025
+    wali_kelas_id = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='SET NULL'), nullable=True)
+    is_active     = db.Column(db.Boolean, default=True, nullable=False)
+    created_at    = db.Column(db.DateTime, default=utc_now)
+    updated_at    = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+
+    # Relasi
+    wali_kelas    = db.relationship('Pengguna', foreign_keys=[wali_kelas_id], backref=db.backref('kelas_binaan_rel', uselist=False))
+    siswa_list    = db.relationship('Siswa', foreign_keys='Siswa.kelas_id', backref='kelas_rel', lazy='dynamic')
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'id': self.id,
+            'nama_kelas': self.nama_kelas,
+            'tingkat': self.tingkat,
+            'jurusan': self.jurusan,
+            'angkatan': self.angkatan,
+            'wali_kelas_id': self.wali_kelas_id,
+            'wali_kelas_nama': self.wali_kelas.nama_lengkap if self.wali_kelas else None,
+            'is_active': self.is_active,
+        }
+
+    def __repr__(self):
+        return f'<Kelas {self.nama_kelas}>'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. SISWA (Students)
 # ─────────────────────────────────────────────────────────────────────────────
 class Siswa(BaseModel):
     __tablename__ = 'siswa'
@@ -73,6 +109,7 @@ class Siswa(BaseModel):
     kode_siswa    = db.Column(db.String(10), unique=True, nullable=False, index=True)
     nomor_induk   = db.Column(db.String(30), nullable=True, index=True)   # NIS
     nama          = db.Column(db.String(150), nullable=False)   # hanya admin & guru_bk
+    kelas_id      = db.Column(db.String(36), db.ForeignKey('kelas.id', ondelete='SET NULL'), nullable=True, index=True)
     kelas         = db.Column(db.String(20), nullable=False, index=True)
     angkatan      = db.Column(db.Integer, nullable=False, index=True)
     jenis_kelamin = db.Column(db.String(10), nullable=True)
@@ -81,8 +118,9 @@ class Siswa(BaseModel):
     updated_at    = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     # Relasi
-    penilaian   = db.relationship('Penilaian',   backref='siswa', lazy='dynamic', cascade='all, delete-orphan')
-    pengamatan  = db.relationship('Pengamatan',  backref='siswa', lazy='dynamic', cascade='all, delete-orphan')
+    penilaian         = db.relationship('Penilaian', backref='siswa', lazy='dynamic', cascade='all, delete-orphan')
+    pengamatan        = db.relationship('Pengamatan', backref='siswa', lazy='dynamic', cascade='all, delete-orphan')
+    hasil_klasifikasi = db.relationship('HasilKlasifikasi', foreign_keys='HasilKlasifikasi.siswa_id', backref='siswa_terkait', lazy='dynamic', cascade='all, delete-orphan')
 
     @property
     def penilaian_terbaru(self):
@@ -94,7 +132,7 @@ class Siswa(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. PERIODE (Academic & Evaluation Periods)
+# 4. PERIODE (Academic & Evaluation Periods)
 # ─────────────────────────────────────────────────────────────────────────────
 class Periode(BaseModel):
     __tablename__ = 'periode'
@@ -345,45 +383,94 @@ class Pengamatan(BaseModel):
 
     siswa: Any = None
 
-    id            = db.Column(db.String(36), primary_key=True, default=gen_uuid)
-    siswa_id      = db.Column(db.String(36), db.ForeignKey('siswa.id', ondelete='CASCADE'), nullable=False, index=True)
-    pengamat_id   = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='RESTRICT'), nullable=False)
-    periode_id    = db.Column(db.String(36), db.ForeignKey('periode.id', ondelete='RESTRICT'), nullable=True, index=True)
-    periode       = db.Column(db.String(30), nullable=False, index=True)
-    catatan       = db.Column(db.Text, nullable=False)
-    skor_perilaku = db.Column(db.SmallInteger, nullable=True)  # 1-5 opsional
-    created_at    = db.Column(db.DateTime, default=utc_now)
-    updated_at    = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    id                   = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    siswa_id             = db.Column(db.String(36), db.ForeignKey('siswa.id', ondelete='CASCADE'), nullable=False, index=True)
+    pengamat_id          = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='RESTRICT'), nullable=False, index=True)
+    periode_id           = db.Column(db.String(36), db.ForeignKey('periode.id', ondelete='RESTRICT'), nullable=True, index=True)
+    periode              = db.Column(db.String(30), nullable=False, index=True)
+    catatan              = db.Column(db.Text, nullable=False)
+    skor_perilaku        = db.Column(db.SmallInteger, nullable=True)  # 1-5 opsional
+    status_tindak_lanjut = db.Column(db.String(50), default="Belum Ditindaklanjuti", nullable=False)
+    versi_revisi         = db.Column(db.Integer, default=1, nullable=False)
+    created_at           = db.Column(db.DateTime, default=utc_now)
+    updated_at           = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     # Relasi
-    periode_rel = db.relationship('Periode', foreign_keys=[periode_id], backref=db.backref('pengamatan_list', lazy='dynamic'))
+    periode_rel    = db.relationship('Periode', foreign_keys=[periode_id], backref=db.backref('pengamatan_list', lazy='dynamic'))
+    riwayat_revisi = db.relationship('RiwayatPengamatan', backref='pengamatan_asli', lazy='dynamic', cascade='all, delete-orphan', order_by='RiwayatPengamatan.revisi_ke.desc()')
+
+    def simpan_riwayat_revisi(self, direvisi_oleh_id: str | None, alasan: str | None) -> 'RiwayatPengamatan':
+        riwayat = RiwayatPengamatan(
+            pengamatan_id=self.id,
+            revisi_ke=self.versi_revisi,
+            catatan_lama=self.catatan,
+            skor_perilaku_lama=self.skor_perilaku,
+            direvisi_oleh=direvisi_oleh_id,
+            alasan_revisi=alasan
+        )
+        db.session.add(riwayat)
+        self.versi_revisi += 1
+        return riwayat
 
     def __repr__(self):
         return f'<Pengamatan {self.siswa_id} [{self.periode}]>'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. HASIL KLASIFIKASI
+# 7. RIWAYAT PENGAMATAN (Observation History without Overwrite)
+# ─────────────────────────────────────────────────────────────────────────────
+class RiwayatPengamatan(BaseModel):
+    __tablename__ = 'riwayat_pengamatan'
+
+    id                 = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    pengamatan_id      = db.Column(db.String(36), db.ForeignKey('pengamatan.id', ondelete='CASCADE'), nullable=False, index=True)
+    revisi_ke          = db.Column(db.Integer, nullable=False)
+    catatan_lama       = db.Column(db.Text, nullable=False)
+    skor_perilaku_lama = db.Column(db.SmallInteger, nullable=True)
+    direvisi_oleh      = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='SET NULL'), nullable=True)
+    alasan_revisi      = db.Column(db.Text, nullable=True)
+    direvisi_pada      = db.Column(db.DateTime, default=utc_now)
+
+    # Relasi
+    editor = db.relationship('Pengguna', foreign_keys=[direvisi_oleh])
+
+    def __repr__(self):
+        return f'<RiwayatPengamatan {self.pengamatan_id} Rev#{self.revisi_ke}>'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. HASIL KLASIFIKASI (Predictions)
 # ─────────────────────────────────────────────────────────────────────────────
 class HasilKlasifikasi(BaseModel):
     __tablename__ = 'hasil_klasifikasi'
 
-    id              = db.Column(db.String(36), primary_key=True, default=gen_uuid)
-    penilaian_id    = db.Column(db.String(36), db.ForeignKey('penilaian.id', ondelete='CASCADE'), nullable=False, index=True)
-    versi_model     = db.Column(db.String(50), nullable=False)
-    prediksi        = db.Column(db.String(30), nullable=False)   # Baik / Perlu Pendampingan
-    kepercayaan     = db.Column(db.Float, nullable=True)
-    path_aturan     = db.Column(db.Text, nullable=True)          # aturan yang dipakai
-    ditinjau_oleh   = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='SET NULL'), nullable=True)
-    catatan_tinjau  = db.Column(db.Text, nullable=True)
-    created_at      = db.Column(db.DateTime, default=utc_now)
+    id                = db.Column(db.String(36), primary_key=True, default=gen_uuid)
+    penilaian_id      = db.Column(db.String(36), db.ForeignKey('penilaian.id', ondelete='CASCADE'), nullable=False, index=True)
+    siswa_id          = db.Column(db.String(36), db.ForeignKey('siswa.id', ondelete='CASCADE'), nullable=True, index=True)
+    periode_id        = db.Column(db.String(36), db.ForeignKey('periode.id', ondelete='SET NULL'), nullable=True, index=True)
+    periode           = db.Column(db.String(30), nullable=True, index=True)
+    model_id          = db.Column(db.String(36), db.ForeignKey('log_model.id', ondelete='SET NULL'), nullable=True, index=True)
+    versi_model       = db.Column(db.String(50), nullable=False, index=True)
+    prediksi          = db.Column(db.String(30), nullable=False)   # Baik / Perlu Pendampingan
+    kepercayaan       = db.Column(db.Float, nullable=True)
+    label_aktual      = db.Column(db.String(30), nullable=True)   # Ground truth jika ada
+    is_tepat          = db.Column(db.Boolean, nullable=True)       # True jika prediksi == label_aktual
+    path_aturan       = db.Column(db.Text, nullable=True)          # aturan yang dipakai
+    ditinjau_oleh     = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='SET NULL'), nullable=True)
+    catatan_tinjau    = db.Column(db.Text, nullable=True)
+    waktu_klasifikasi = db.Column(db.DateTime, default=utc_now)
+    created_at        = db.Column(db.DateTime, default=utc_now)
+
+    # Relasi
+    periode_rel       = db.relationship('Periode', foreign_keys=[periode_id])
+    model_rel         = db.relationship('LogModel', foreign_keys=[model_id])
 
     def __repr__(self):
         return f'<HasilKlasifikasi {self.penilaian_id} → {self.prediksi}>'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. ATURAN C4.5
+# 9. ATURAN C4.5
 # ─────────────────────────────────────────────────────────────────────────────
 class AturanC45(BaseModel):
     __tablename__ = 'aturan_c45'
@@ -421,6 +508,12 @@ class LogModel(BaseModel):
     pohon_json       = db.Column(db.Text, nullable=True)   # Serialisasi struktur pohon JSON
     n_aturan         = db.Column(db.Integer, nullable=False)
     kedalaman_pohon  = db.Column(db.Integer, nullable=False)
+    versi_algoritma  = db.Column(db.String(50), default="C4.5 (Quinlan, 1993)", nullable=True)
+    dist_latih       = db.Column(db.Text, nullable=True)   # JSON string {'Baik': 118, 'Perlu Pendampingan': 42}
+    dist_uji         = db.Column(db.Text, nullable=True)   # JSON string {'Baik': 29, 'Perlu Pendampingan': 11}
+    fitur_masukan    = db.Column(db.Text, nullable=True)   # JSON string list 4 aspek
+    parameter_split  = db.Column(db.Text, nullable=True)   # JSON string test_size, random_state, stratified
+    detail_data_uji  = db.Column(db.Text, nullable=True)   # JSON string rincian 40 data uji aktual
     dilatih_oleh     = db.Column(db.String(36), db.ForeignKey('pengguna.id', ondelete='SET NULL'), nullable=True)
     created_at       = db.Column(db.DateTime, default=utc_now)
 

@@ -125,16 +125,22 @@
   <!-- META -->
   <table class="meta-table">
     <tr>
-      <td width="15%"><strong>Periode Penilaian</strong></td>
-      <td width="35%">: {{ periode }}</td>
-      <td width="15%"><strong>Tanggal Cetak</strong></td>
-      <td width="35%">: {{ tanggal_cetak }}</td>
+      <td width="18%"><strong>Periode Penilaian</strong></td>
+      <td width="32%">: {{ periode }}</td>
+      <td width="18%"><strong>Tanggal Cetak</strong></td>
+      <td width="32%">: {{ tanggal_cetak }}</td>
     </tr>
     <tr>
-      <td><strong>Filter Kelas / Angkatan</strong></td>
-      <td>: {{ kelas }} / {{ angkatan if angkatan else 'Semua Angkatan' }}</td>
-      <td><strong>Versi Model</strong></td>
+      <td><strong>Filter Kelas / Jenjang</strong></td>
+      <td>: {{ kelas }} / {{ ('Angkatan ' ~ angkatan) if angkatan else 'Semua Angkatan' }}</td>
+      <td><strong>Versi Model C4.5</strong></td>
       <td>: {{ model_terbaru.versi_model if model_terbaru else '-' }} (Akurasi: {{ '%.1f'|format(model_terbaru.akurasi * 100) if model_terbaru else '-' }}%)</td>
+    </tr>
+    <tr>
+      <td><strong>Kategori Rekomendasi</strong></td>
+      <td>: {{ label if label else 'Semua Kategori (Baik & Perlu Pendampingan)' }}</td>
+      <td><strong>Status Data</strong></td>
+      <td>: {{ 'Data Berlabel (Training/Validasi)' if status_data == 'berlabel' else ('Hasil Prediksi C4.5' if status_data == 'prediksi' else 'Semua Data') }}</td>
     </tr>
   </table>
 

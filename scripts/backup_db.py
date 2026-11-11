@@ -12,11 +12,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app.models import (
     AturanC45,
+    AuditTrail,
     HasilKlasifikasi,
     LogModel,
     Pengamatan,
     Pengguna,
     Penilaian,
+    Periode,
+    RiwayatPenilaian,
     Siswa,
     db,
 )
@@ -142,6 +145,33 @@ def backup():
                 }
                 for m in LogModel.query.all()
             ],
+            'periode': [
+                p.to_dict() for p in Periode.query.all()
+            ],
+            'audit_trail': [
+                {
+                    'id': a.id,
+                    'user_id': a.user_id,
+                    'user_nama': a.user_nama,
+                    'user_peran': a.user_peran,
+                    'aksi': a.aksi,
+                    'tabel': a.tabel,
+                    'record_id': a.record_id,
+                    'keterangan': a.keterangan,
+                    'created_at': a.created_at.isoformat() if a.created_at else None,
+                }
+                for a in AuditTrail.query.all()
+            ],
+            'riwayat_penilaian': [
+                {
+                    'id': r.id,
+                    'penilaian_id': r.penilaian_id,
+                    'revisi_ke': r.revisi_ke,
+                    'alasan_revisi': r.alasan_revisi,
+                    'direvisi_pada': r.direvisi_pada.isoformat() if r.direvisi_pada else None,
+                }
+                for r in RiwayatPenilaian.query.all()
+            ],
         }
 
         with open(backup_file, 'w', encoding='utf-8') as f:
@@ -151,11 +181,14 @@ def backup():
         print(f"[✓] Backup berhasil disimpan: {backup_file} ({file_size} bytes)")
         print(f"    - Pengguna        : {len(data['pengguna'])}")
         print(f"    - Siswa           : {len(data['siswa'])}")
+        print(f"    - Periode         : {len(data['periode'])}")
         print(f"    - Penilaian       : {len(data['penilaian'])}")
         print(f"    - Pengamatan      : {len(data['pengamatan'])}")
         print(f"    - Hasil Klasifikasi: {len(data['hasil_klasifikasi'])}")
         print(f"    - Aturan C4.5     : {len(data['aturan_c45'])}")
         print(f"    - Log Model       : {len(data['log_model'])}")
+        print(f"    - Audit Trail     : {len(data['audit_trail'])}")
+        print(f"    - Riwayat Revisi  : {len(data['riwayat_penilaian'])}")
         return backup_file
 
 

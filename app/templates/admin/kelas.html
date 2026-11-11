@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Kelola Master Kelas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Kelola Master Kelas</h4>
+    <p class="text-muted small mb-0">Manajemen rombongan belajar, penetapan wali kelas, dan angkatan siswa SMK Plus Khoiriyah Hasyim.</p>
+  </div>
+  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalTambahKelas">
+    <i class="bi bi-plus-circle me-1"></i> Tambah Kelas
+  </button>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width: 50px;">No</th>
+            <th>Nama Kelas</th>
+            <th>Tingkat</th>
+            <th>Jurusan</th>
+            <th>Angkatan</th>
+            <th>Wali Kelas</th>
+            <th>Status</th>
+            <th class="text-end pe-3" style="width: 120px;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for k in daftar_kelas %}
+          <tr>
+            <td class="ps-3 text-secondary">{{ loop.index }}</td>
+            <td class="fw-bold text-dark">{{ k.nama_kelas }}</td>
+            <td><span class="badge bg-light text-dark border">{{ k.tingkat or '-' }}</span></td>
+            <td>{{ k.jurusan }}</td>
+            <td><span class="badge bg-secondary-subtle text-secondary">{{ k.angkatan }}</span></td>
+            <td>
+              {% if k.wali_kelas %}
+                <span class="fw-semibold text-primary"><i class="bi bi-person-check me-1"></i>{{ k.wali_kelas.nama_lengkap }}</span>
+              {% else %}
+                <span class="text-muted fst-italic">Belum ditentukan</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if k.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-muted">Nonaktif</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              <form action="{{ url_for('admin.kelas_toggle', id=k.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm {% if k.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}" title="Ubah Status">
+                  <i class="bi {% if k.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %}"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">Belum ada data kelas yang terdaftar.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tambah Kelas -->
+<div class="modal fade" id="modalTambahKelas" tabindex="-1" aria-labelledby="modalTambahKelasLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="{{ url_for('admin.kelas_tambah') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="modalTambahKelasLabel">Tambah Rombongan Belajar (Kelas)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Nama Kelas <span class="text-danger">*</span></label>
+            <input type="text" name="nama_kelas" class="form-control" placeholder="Contoh: MM A 2025" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Tingkat</label>
+              <select name="tingkat" class="form-select">
+                <option value="X">Kelas X</option>
+                <option value="XI">Kelas XI</option>
+                <option value="XII">Kelas XII</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Angkatan Masuk <span class="text-danger">*</span></label>
+              <input type="number" name="angkatan" class="form-control" value="2025" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Jurusan / Kompetensi Keahlian</label>
+            <input type="text" name="jurusan" class="form-control" value="Multimedia" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Wali Kelas Pengampu</label>
+            <select name="wali_kelas_id" class="form-select">
+              <option value="">-- Pilih Wali Kelas (Opsional) --</option>
+              {% for wk in wali_kelas_list %}
+                <option value="{{ wk.id }}">{{ wk.nama_lengkap }} ({{ wk.username }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm">Simpan Kelas</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

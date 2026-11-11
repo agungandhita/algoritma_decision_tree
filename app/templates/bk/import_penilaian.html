@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Import Dataset Penilaian Siswa{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">Import Dataset Penilaian (Excel / CSV)</h4>
+    <p class="text-muted small mb-0">Unggah berkas rekap penilaian sosial-emosional siswa dengan validasi otomatis skor 12 variabel dan anonimisasi data.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('bk.penilaian_template') }}" class="btn btn-outline-secondary btn-sm me-2">
+      <i class="bi bi-download me-1"></i> Unduh Format Template
+    </a>
+    <a href="{{ url_for('bk.penilaian_list') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-7">
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white py-3">
+        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-cloud-arrow-up me-2 text-primary"></i>Unggah Berkas Dataset</h6>
+      </div>
+      <div class="card-body p-4">
+        <form action="{{ url_for('bk.penilaian_import') }}" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Pilih Periode Monitoring <span class="text-danger">*</span></label>
+            <select name="periode_id" class="form-select" required>
+              {% for pr in daftar_master_periode %}
+                <option value="{{ pr.id }}" {% if pr.is_active %}selected{% endif %}>
+                  {{ pr.nama_periode }} ({{ pr.kode_periode }}) {% if pr.is_active %}[Aktif]{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Nilai pada berkas akan ditautkan ke periode pemantauan ini.</div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Pilih Berkas Excel / CSV <span class="text-danger">*</span></label>
+            <input type="file" name="berkas" class="form-control" accept=".xlsx,.xls,.csv" required>
+            <div class="form-text">Format yang didukung: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code>. Ukuran maksimal 5 MB.</div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check2-circle me-1"></i> Mulai Validasi & Import Data
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if hasil_import %}
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white py-3">
+        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-pie-chart-fill me-2 text-info"></i>Ringkasan Hasil Import</h6>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-4">
+            <div class="p-3 bg-success-subtle text-success rounded">
+              <div class="fs-3 fw-bold">{{ hasil_import.sukses }}</div>
+              <div class="small fw-semibold">Berhasil Diimpor</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-info-subtle text-info rounded">
+              <div class="fs-3 fw-bold">{{ hasil_import.duplikat }}</div>
+              <div class="small fw-semibold">Duplikat (Dilewati)</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-warning-subtle text-warning rounded">
+              <div class="fs-3 fw-bold">{{ hasil_import.gagal }}</div>
+              <div class="small fw-semibold">Gagal Validasi</div>
+            </div>
+          </div>
+        </div>
+
+        {% if laporan_validasi %}
+        <div class="mt-3">
+          <h6 class="small fw-bold text-secondary mb-2">Catatan Validasi Baris:</h6>
+          <div class="p-2 bg-light border rounded" style="max-height: 200px; overflow-y: auto;">
+            <ul class="list-unstyled small mb-0 font-monospace">
+              {% for catatan in laporan_validasi %}
+                <li class="text-muted border-bottom py-1">{{ catatan }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-5">
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+      <div class="card-body p-4">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-shield-check me-2 text-success"></i>Ketentuan Validasi & Keamanan Data</h6>
+        <ul class="small text-secondary ps-3 mb-3">
+          <li class="mb-2"><strong>Total Sampling:</strong> Seluruh 200 populasi siswa dimasukkan ke dalam sistem tanpa pembatasan sampel acak atau rumus Slovin.</li>
+          <li class="mb-2"><strong>Skor Valid:</strong> Seluruh 12 variabel (IS1–IS3, RE1–RE3, EM1–EM3, KS1–KS3) wajib bernilai bilangan bulat antara <strong>1 sampai 4</strong>.</li>
+          <li class="mb-2"><strong>Anonimisasi:</strong> Identitas siswa otomatis dipetakan ke kode anonim unik (S001, S002, dst.).</li>
+          <li class="mb-2"><strong>Pencegahan Duplikasi:</strong> Penilaian pada kombinasi siswa dan periode yang sama tidak akan ditimpa sembarangan untuk menjaga integritas data.</li>
+          <li class="mb-2"><strong>Klasifikasi Otomatis:</strong> Data yang diimpor akan langsung dihubungkan dengan model C4.5 yang aktif untuk menghasilkan prediksi rekomendasi pendampingan.</li>
+        </ul>
+
+        <div class="text-center pt-2">
+          <a href="{{ url_for('bk.penilaian_template') }}" class="btn btn-outline-success btn-sm w-100">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Unduh File Template Excel (.xlsx)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

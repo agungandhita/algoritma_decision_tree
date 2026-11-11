@@ -6,6 +6,7 @@ from app.auth.decorators import admin_required
 from app.models import (
     AturanC45,
     AuditTrail,
+    Kelas,
     LogModel,
     Pengguna,
     Penilaian,
@@ -24,25 +25,44 @@ admin_bp = Blueprint('admin', __name__)
 def dashboard():
     total_pengguna = Pengguna.query.count()
     total_siswa = Siswa.query.filter_by(is_active=True).count()
+    total_kelas = Kelas.query.count()
     total_penilaian = Penilaian.query.count()
     total_aturan = AturanC45.query.count()
     total_periode = Periode.query.count()
     total_audit = AuditTrail.query.count()
 
+    # Status Kelengkapan Dataset Penelitian (Total Sampling 200 Siswa)
+    siswa_dinilai = db.session.query(Penilaian.siswa_id).distinct().count()
+    persen_kelengkapan = round((siswa_dinilai / total_siswa * 100), 1) if total_siswa > 0 else 0
+    penilaian_berlabel = Penilaian.query.filter(Penilaian.label.isnot(None)).count()
+
+    status_kelengkapan = {
+        'populasi_total': total_siswa,
+        'siswa_dinilai': siswa_dinilai,
+        'persentase': persen_kelengkapan,
+        'penilaian_berlabel': penilaian_berlabel,
+        'is_lengkap': (siswa_dinilai >= total_siswa and total_siswa > 0),
+        'status_teks': 'Lengkap (Total Sampling 200 Siswa Terpenuhi)' if siswa_dinilai >= total_siswa else 'Sebagian Terisi'
+    }
+
     pengguna_terbaru = Pengguna.query.order_by(Pengguna.created_at.desc()).limit(5).all()
     siswa_terbaru = Siswa.query.order_by(Siswa.created_at.desc()).limit(5).all()
+    aktivitas_terbaru = AuditTrail.query.order_by(AuditTrail.created_at.desc()).limit(7).all()
     model_terbaru = LogModel.query.order_by(LogModel.created_at.desc()).first()
 
     return render_template(
         'admin/dashboard.html',
         total_pengguna=total_pengguna,
         total_siswa=total_siswa,
+        total_kelas=total_kelas,
         total_penilaian=total_penilaian,
         total_aturan=total_aturan,
         total_periode=total_periode,
         total_audit=total_audit,
+        status_kelengkapan=status_kelengkapan,
         pengguna_terbaru=pengguna_terbaru,
         siswa_terbaru=siswa_terbaru,
+        aktivitas_terbaru=aktivitas_terbaru,
         model_terbaru=model_terbaru
     )
 
@@ -256,6 +276,80 @@ def siswa_hapus(id):
     db.session.commit()
     flash(f'Siswa {siswa.kode_siswa} berhasil dinonaktifkan.', 'info')
     return redirect(url_for('admin.siswa_list'))
+
+
+# ── Kelola Master Kelas ─────────────────────────────────────────────────────
+@admin_bp.route('/kelas')
+@admin_required
+def kelas_list():
+    daftar_kelas = Kelas.query.order_by(Kelas.angkatan.desc(), Kelas.nama_kelas.asc()).all()
+    wali_kelas_list = Pengguna.query.filter_by(peran='wali_kelas', is_active=True).order_by(Pengguna.nama_lengkap).all()
+    return render_template('admin/kelas.html', daftar_kelas=daftar_kelas, wali_kelas_list=wali_kelas_list)
+
+
+@admin_bp.route('/kelas/tambah', methods=['POST'])
+@admin_required
+def kelas_tambah():
+    nama_kelas = request.form.get('nama_kelas', '').strip()
+    tingkat = request.form.get('tingkat', '').strip() or 'X'
+    jurusan = request.form.get('jurusan', '').strip() or 'Multimedia'
+    angkatan = request.form.get('angkatan', type=int) or 2025
+    wali_kelas_id = request.form.get('wali_kelas_id', '').strip() or None
+
+    if not nama_kelas:
+        flash('Nama kelas wajib diisi.', 'danger')
+        return redirect(url_for('admin.kelas_list'))
+
+    if Kelas.query.filter_by(nama_kelas=nama_kelas).first():
+        flash(f'Kelas {nama_kelas} sudah ada.', 'warning')
+        return redirect(url_for('admin.kelas_list'))
+
+    kelas_baru = Kelas(
+        nama_kelas=nama_kelas,
+        tingkat=tingkat,
+        jurusan=jurusan,
+        angkatan=angkatan,
+        wali_kelas_id=wali_kelas_id,
+        is_active=True
+    )
+    db.session.add(kelas_baru)
+
+    catat_audit(
+        aksi='TAMBAH',
+        tabel='kelas',
+        record_id=kelas_baru.id,
+        data_baru=kelas_baru.to_dict(),
+        keterangan=f"Menambahkan master kelas {nama_kelas} angkatan {angkatan}",
+        user=current_user,
+        ip_address=request.remote_addr,
+        user_agent=request.user_agent.string
+    )
+
+    db.session.commit()
+    flash(f'Kelas {nama_kelas} berhasil ditambahkan.', 'success')
+    return redirect(url_for('admin.kelas_list'))
+
+
+@admin_bp.route('/kelas/<id>/toggle', methods=['POST'])
+@admin_required
+def kelas_toggle(id):
+    k = Kelas.query.get_or_404(id)
+    k.is_active = not k.is_active
+
+    catat_audit(
+        aksi='UBAH_STATUS',
+        tabel='kelas',
+        record_id=k.id,
+        data_baru={'is_active': k.is_active},
+        keterangan=f"Status kelas {k.nama_kelas} diubah menjadi {'Aktif' if k.is_active else 'Nonaktif'}",
+        user=current_user,
+        ip_address=request.remote_addr,
+        user_agent=request.user_agent.string
+    )
+
+    db.session.commit()
+    flash(f"Kelas {k.nama_kelas} berhasil {'diaktifkan' if k.is_active else 'dinonaktifkan'}.", 'info')
+    return redirect(url_for('admin.kelas_list'))
 
 
 # ── Kelola Master Periode ───────────────────────────────────────────────────

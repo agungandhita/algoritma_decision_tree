@@ -53,8 +53,42 @@ def create_app(config_name='default'):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     # Root redirect
-    from flask import redirect, url_for
+    from flask import flash, jsonify, redirect, render_template, request, url_for
     from flask_login import current_user
+    from flask_wtf.csrf import CSRFError
+
+    # Error handlers kustom (tidak menampilkan stack trace di sisi pengguna)
+    @app.errorhandler(400)
+    def handle_bad_request(e):
+        if request.path.startswith('/api/') or request.is_json:
+            return jsonify({'status': 'error', 'code': 400, 'message': 'Permintaan tidak valid.'}), 400
+        return render_template('errors/400.html', error=e), 400
+
+    @app.errorhandler(403)
+    def handle_forbidden(e):
+        if request.path.startswith('/api/') or request.is_json:
+            return jsonify({'status': 'error', 'code': 403, 'message': 'Akses ditolak.'}), 403
+        return render_template('errors/403.html', error=e), 403
+
+    @app.errorhandler(404)
+    def handle_not_found(e):
+        if request.path.startswith('/api/') or request.is_json:
+            return jsonify({'status': 'error', 'code': 404, 'message': 'Halaman tidak ditemukan.'}), 404
+        return render_template('errors/404.html', error=e), 404
+
+    @app.errorhandler(500)
+    def handle_server_error(e):
+        app.logger.error(f"Internal Server Error: {e}")
+        if request.path.startswith('/api/') or request.is_json:
+            return jsonify({'status': 'error', 'code': 500, 'message': 'Terjadi kesalahan sistem internal.'}), 500
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        flash('Token keamanan formulir kedaluwarsa atau tidak valid. Silakan muat ulang halaman.', 'warning')
+        if request.path.startswith('/api/') or request.is_json:
+            return jsonify({'status': 'error', 'code': 400, 'message': 'Token CSRF tidak valid atau kedaluwarsa.'}), 400
+        return render_template('errors/400.html', error="Token CSRF tidak valid atau kedaluwarsa."), 400
 
     @app.route('/')
     def index():

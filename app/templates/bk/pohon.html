@@ -2,9 +2,9 @@
 {% block title %}Pohon Keputusan C4.5 - {{ versi }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
   <div>
-    <h4 class="fw-bold text-dark mb-1">Visualisasi Pohon Keputusan C4.5</h4>
+    <h4 class="fw-bold text-dark mb-1">Visualisasi Pohon Keputusan & Perhitungan C4.5</h4>
     <p class="text-muted small mb-0">Model Versi: <code>{{ versi }}</code> | Kriteria: Gain Ratio & Entropi Shannon (Quinlan, 1993)</p>
   </div>
   <a href="{{ url_for('bk.model_index') }}" class="btn btn-outline-secondary btn-sm">
@@ -12,10 +12,95 @@
   </a>
 </div>
 
+{% if tabel_akar %}
+<!-- Card Tabel Perhitungan C4.5 (Entropy, Gain, Split Info, Gain Ratio) -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h6 class="fw-bold text-dark mb-0">
+        <i class="bi bi-calculator-fill text-primary me-2"></i>Perhitungan C4.5 Pada Simpul Akar (Root Node)
+      </h6>
+      <small class="text-muted">Data Latih: {{ tabel_akar.n_sampel }} sampel | Entropi Total S: <strong>{{ tabel_akar.entropy_akar }}</strong></small>
+    </div>
+    <span class="badge bg-primary px-3 py-2 fs-6">
+      Akar Terpilih: {{ tabel_akar.atribut_akar }}
+    </span>
+  </div>
+  <div class="card-body p-4">
+    <!-- Formula Accordion / Note -->
+    <div class="alert alert-light border small text-secondary mb-4">
+      <div class="fw-bold text-dark mb-2"><i class="bi bi-info-circle text-primary me-1"></i> Rumus Matematis C4.5 (Quinlan, 1993):</div>
+      <div class="row g-2">
+        <div class="col-md-3">
+          <div class="p-2 bg-white rounded border">
+            <strong>1. Entropy S:</strong><br>
+            <code>H(S) = - &Sigma; p<sub>i</sub> log<sub>2</sub>(p<sub>i</sub>)</code>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-2 bg-white rounded border">
+            <strong>2. Information Gain:</strong><br>
+            <code>IG(S,A) = H(S) - &Sigma; (|S<sub>v</sub>|/|S|) H(S<sub>v</sub>)</code>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-2 bg-white rounded border">
+            <strong>3. Split Information:</strong><br>
+            <code>SI(S,A) = - &Sigma; (|S<sub>v</sub>|/|S|) log<sub>2</sub>(|S<sub>v</sub>|/|S|)</code>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-2 bg-white rounded border">
+            <strong>4. Gain Ratio:</strong><br>
+            <code>GR(S,A) = IG(S,A) / SI(S,A)</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabel Komparasi 4 Fitur -->
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered align-middle text-center mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th class="text-start">Atribut / Variabel Aspek</th>
+            <th>Entropi Total H(S)</th>
+            <th>Information Gain (IG)</th>
+            <th>Split Information (SI)</th>
+            <th>Gain Ratio (GR)</th>
+            <th>Status Keputusan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in tabel_akar.fitur %}
+          <tr class="{% if f.is_akar %}table-primary fw-semibold{% endif %}">
+            <td class="text-start">
+              <strong>{{ f.atribut }}</strong>
+            </td>
+            <td>{{ f.entropy_total }}</td>
+            <td class="text-info fw-bold">{{ f.information_gain }}</td>
+            <td>{{ f.split_info }}</td>
+            <td class="text-primary fw-bold fs-6">{{ f.gain_ratio }}</td>
+            <td>
+              {% if f.is_akar %}
+                <span class="badge bg-success"><i class="bi bi-star-fill me-1"></i> Simpul Akar (Maksimum GR)</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary">Simpul Cabang</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Pohon Visual Interaktif -->
-<div class="card mb-4">
-  <div class="card-header bg-white d-flex justify-content-between align-items-center">
-    <span class="fw-bold"><i class="bi bi-diagram-3-fill text-primary me-1"></i> Struktur Pohon Keputusan (Visual HTML)</span>
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span class="fw-bold text-dark"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Struktur Pohon Keputusan (Visual Interaktif)</span>
     <span class="badge bg-light text-muted border">Biru = Simpul Fitur, Hijau = Daun "Baik", Merah = Daun "Perlu Pendampingan"</span>
   </div>
   <div class="card-body p-4" style="overflow-x: auto; min-height: 380px;">
@@ -24,9 +109,9 @@
 </div>
 
 <!-- Teks Representasi Pohon untuk Skripsi -->
-<div class="card">
-  <div class="card-header bg-white fw-bold">
-    <i class="bi bi-code-slash text-dark me-1"></i> Struktur Pohon Berbasis Teks (Format Skripsi)
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white py-3 fw-bold text-dark">
+    <i class="bi bi-code-slash text-secondary me-2"></i>Struktur Pohon Berbasis Teks (Format Laporan Skripsi)
   </div>
   <div class="card-body p-3 bg-light">
     <pre class="mb-0 font-monospace" style="font-size: 0.85rem; line-height: 1.6;">{{ tree_text }}</pre>
@@ -35,11 +120,22 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="application/json" id="treeDataJson">
+{{ tree_json | safe }}
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const treeData = {{ tree_json | safe }};
-  renderC45Tree(treeData, 'treeContainer');
+  const dataEl = document.getElementById('treeDataJson');
+  if (dataEl && dataEl.textContent) {
+    try {
+      const treeData = JSON.parse(dataEl.textContent);
+      if (treeData && typeof renderC45Tree === 'function') {
+        renderC45Tree(treeData, 'treeContainer');
+      }
+    } catch (e) {
+      console.error('Gagal parsing struktur pohon C4.5:', e);
+    }
+  }
 });
 </script>
 {% endblock %}
-

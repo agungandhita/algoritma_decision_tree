@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}SIMONSEM{% endblock %} - SMK Plus Khoiriyah Hasyim Tebuireng</title>
+  <title>{% block title %}SIMONSEM{% endblock %} — Sistem Monitoring Kebutuhan Pendampingan Sosial dan Emosional Siswa</title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
@@ -25,13 +25,13 @@
 
 <div class="app-layout d-flex min-vh-100">
   <!-- SIDEBAR -->
-  <aside class="sidebar d-flex flex-column flex-shrink-0">
+  <aside class="sidebar d-flex flex-column flex-shrink-0" id="appSidebar">
     <div class="sidebar-brand text-white">
       <div class="d-flex align-items-center gap-2">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo SMK" class="rounded bg-white p-1" style="width: 38px; height: 38px; object-fit: contain;">
-        <div>
-          <h6 class="mb-0 fw-bold tracking-wide">SIMONSEM</h6>
-          <small class="text-white-50" style="font-size: 0.75rem;">Decision Tree C4.5</small>
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo SMK" class="rounded bg-white p-1" style="width: 40px; height: 40px; object-fit: contain;">
+        <div class="overflow-hidden">
+          <h6 class="mb-0 fw-bold tracking-wide text-white">SIMONSEM</h6>
+          <small class="text-white-50 d-block text-truncate" style="font-size: 0.68rem; max-width: 180px;" title="Sistem Monitoring Kebutuhan Pendampingan Sosial dan Emosional Siswa">Monitoring Sosial & Emosional</small>
         </div>
       </div>
     </div>
@@ -46,22 +46,27 @@
             </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.pengguna_list') }}" class="nav-link {% if 'admin.pengguna' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin.pengguna_list') }}" class="nav-link {% if request.endpoint and 'admin.pengguna' in request.endpoint %}active{% endif %}">
               <i class="bi bi-people-fill"></i> Kelola Pengguna
             </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.siswa_list') }}" class="nav-link {% if 'admin.siswa' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin.siswa_list') }}" class="nav-link {% if request.endpoint and 'admin.siswa' in request.endpoint %}active{% endif %}">
               <i class="bi bi-person-lines-fill"></i> Kelola Siswa
             </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.periode_list') }}" class="nav-link {% if 'admin.periode' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin.kelas_list') }}" class="nav-link {% if request.endpoint and 'admin.kelas' in request.endpoint %}active{% endif %}">
+              <i class="bi bi-mortarboard-fill"></i> Kelola Kelas
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('admin.periode_list') }}" class="nav-link {% if request.endpoint and 'admin.periode' in request.endpoint %}active{% endif %}">
               <i class="bi bi-calendar-range-fill"></i> Kelola Periode
             </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.audit_trail_list') }}" class="nav-link {% if 'admin.audit_trail' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin.audit_trail_list') }}" class="nav-link {% if request.endpoint and 'admin.audit_trail' in request.endpoint %}active{% endif %}">
               <i class="bi bi-journal-code"></i> Audit Trail
             </a>
           </li>
@@ -74,27 +79,27 @@
             </a>
           </li>
           <li>
-            <a href="{{ url_for('bk.penilaian_list') }}" class="nav-link {% if 'bk.penilaian' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('bk.penilaian_list') }}" class="nav-link {% if request.endpoint and 'bk.penilaian' in request.endpoint %}active{% endif %}">
               <i class="bi bi-clipboard2-check-fill"></i> Penilaian Siswa
             </a>
           </li>
           <li>
-            <a href="{{ url_for('bk.catatan_walikelas_list') }}" class="nav-link {% if 'bk.catatan_walikelas' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('bk.catatan_walikelas_list') }}" class="nav-link {% if request.endpoint and 'bk.catatan_walikelas' in request.endpoint %}active{% endif %}">
               <i class="bi bi-journal-text"></i> Catatan Wali Kelas
             </a>
           </li>
           <li>
-            <a href="{{ url_for('bk.model_index') }}" class="nav-link {% if 'bk.model' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('bk.model_index') }}" class="nav-link {% if request.endpoint and 'bk.model' in request.endpoint %}active{% endif %}">
               <i class="bi bi-cpu-fill"></i> Model C4.5 & Latih
             </a>
           </li>
           <li>
-            <a href="{{ url_for('bk.klasifikasi_index') }}" class="nav-link {% if 'bk.klasifikasi' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('bk.klasifikasi_index') }}" class="nav-link {% if request.endpoint and 'bk.klasifikasi' in request.endpoint %}active{% endif %}">
               <i class="bi bi-ui-checks"></i> Klasifikasi Siswa
             </a>
           </li>
           <li>
-            <a href="{{ url_for('bk.laporan_index') }}" class="nav-link {% if 'bk.laporan' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('bk.laporan_index') }}" class="nav-link {% if request.endpoint and 'bk.laporan' in request.endpoint %}active{% endif %}">
               <i class="bi bi-file-earmark-pdf-fill"></i> Cetak Laporan
             </a>
           </li>
@@ -112,7 +117,7 @@
             </a>
           </li>
           <li>
-            <a href="{{ url_for('walikelas.pengamatan_list') }}" class="nav-link {% if 'walikelas.pengamatan' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('walikelas.pengamatan_list') }}" class="nav-link {% if request.endpoint and 'walikelas.pengamatan' in request.endpoint %}active{% endif %}">
               <i class="bi bi-journal-text"></i> Catatan Pengamatan
             </a>
           </li>
@@ -130,7 +135,7 @@
             </a>
           </li>
           <li>
-            <a href="{{ url_for('kepsek.laporan_index') }}" class="nav-link {% if 'kepsek.laporan' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('kepsek.laporan_index') }}" class="nav-link {% if request.endpoint and 'kepsek.laporan' in request.endpoint %}active{% endif %}">
               <i class="bi bi-file-earmark-bar-graph-fill"></i> Laporan Agregat Monitoring
             </a>
           </li>
@@ -146,11 +151,19 @@
 
   <!-- MAIN WRAPPER -->
   <div class="main-wrapper">
+    <!-- Overlay Backdrop untuk Mobile -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop d-lg-none"></div>
+
     <!-- TOPBAR -->
     <header class="topbar d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-2">
-        <span class="fw-bold text-primary">{{ school_name }}</span>
-        <span class="text-muted d-none d-md-inline">| Sistem Monitoring Kebutuhan Pendampingan Sosial & Emosional</span>
+        <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none me-1" id="sidebarToggle" aria-label="Buka Menu">
+          <i class="bi bi-list fs-5"></i>
+        </button>
+        <div>
+          <span class="fw-bold text-primary">{{ school_name }}</span>
+          <span class="text-muted d-none d-md-inline small ms-1">— SIMONSEM (Sistem Monitoring Kebutuhan Pendampingan Sosial dan Emosional Siswa)</span>
+        </div>
       </div>
 
       <div class="d-flex align-items-center gap-3">

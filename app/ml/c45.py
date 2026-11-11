@@ -153,6 +153,64 @@ class C45Classifier:
         detail['_H_root'] = H_root
         return detail
 
+    @classmethod
+    def hitung_perhitungan_simpul_akar(cls, data: list[dict], fitur_list: list[str], label_col: str = 'label') -> dict:
+        """
+        Menghitung secara transparan metrik C4.5 pada simpul akar:
+        Entropy S, Information Gain, Split Information, dan Gain Ratio.
+        """
+        H_root = cls._entropy(data, label_col)
+        n_total = len(data)
+        dist_total = dict(Counter(d[label_col] for d in data))
+
+        detail_fitur = []
+        best_attr = None
+        max_gr = -1.0
+
+        for attr in fitur_list:
+            IG, partisi = cls._information_gain(data, attr, H_root, label_col)
+            SI = cls._split_information(data, attr)
+            GR = (IG / SI) if SI > 1e-9 else 0.0
+
+            rincian_cabang = []
+            for val in sorted(partisi.keys()):
+                subset = partisi[val]
+                h_sub = cls._entropy(subset, label_col)
+                dist_sub = dict(Counter(d[label_col] for d in subset))
+                rincian_cabang.append({
+                    'nilai': val,
+                    'n': len(subset),
+                    'proporsi': f"{len(subset)}/{n_total}",
+                    'distribusi': dist_sub,
+                    'entropy': round(h_sub, 4)
+                })
+
+            item = {
+                'atribut': attr,
+                'entropy_total': round(H_root, 4),
+                'information_gain': round(IG, 4),
+                'split_info': round(SI, 4),
+                'gain_ratio': round(GR, 4),
+                'cabang': rincian_cabang,
+                'is_akar': False
+            }
+            if GR > max_gr:
+                max_gr = GR
+                best_attr = attr
+            detail_fitur.append(item)
+
+        for item in detail_fitur:
+            if item['atribut'] == best_attr:
+                item['is_akar'] = True
+
+        return {
+            'n_sampel': n_total,
+            'distribusi': dist_total,
+            'entropy_akar': round(H_root, 4),
+            'atribut_akar': best_attr,
+            'fitur': detail_fitur
+        }
+
     # ── Pembuatan Daun (Leaf) ────────────────────────────────────────────────
     def _buat_daun(self, data: list[dict], depth: int, nilai_cabang: str | None = None) -> C45Node:
         node = C45Node()
@@ -419,6 +477,12 @@ class C45Classifier:
         macro_rec = (recall + rec_baik) / 2
         macro_f1  = (f1 + f1_baik) / 2
 
+        n_pp = TP + FN
+        n_bk = TP_baik + FN_baik
+        weighted_pre = (presisi * n_pp + pre_baik * n_bk) / n if n > 0 else 0.0
+        weighted_rec = (recall * n_pp + rec_baik * n_bk) / n if n > 0 else 0.0
+        weighted_f1  = (f1 * n_pp + f1_baik * n_bk) / n if n > 0 else 0.0
+
         return {
             'akurasi': round(akurasi, 4),
             'presisi': round(presisi, 4),
@@ -430,15 +494,25 @@ class C45Classifier:
                 f"Kelas positif adalah '{pos_class}' karena tujuan utama sistem SIMONSEM "
                 "adalah mendeteksi siswa yang membutuhkan pendampingan konseling sosial-emosional."
             ),
+            'penjelasan_rumus': {
+                'akurasi': 'Akurasi = (TP + TN) / (TP + TN + FP + FN)',
+                'presisi': 'Presisi = TP / (TP + FP)',
+                'recall': 'Recall = TP / (TP + FN)',
+                'f1_score': 'F1-Score = 2 * (Presisi * Recall) / (Presisi + Recall)',
+                'macro_avg': 'Rata-rata aritmatika tidak berbobot dari metrik per kelas.',
+                'weighted_avg': 'Rata-rata berbobot berdasarkan proporsi sampel aktual masing-masing kelas.'
+            },
             'metrik_per_kelas': {
                 LABEL_PP: {
                     'TP': TP, 'FP': FP, 'FN': FN, 'TN': TN,
+                    'support': n_pp,
                     'presisi': round(presisi, 4),
                     'recall': round(recall, 4),
                     'f1_score': round(f1, 4),
                 },
                 LABEL_BAIK: {
                     'TP': TP_baik, 'FP': FP_baik, 'FN': FN_baik, 'TN': TN_baik,
+                    'support': n_bk,
                     'presisi': round(pre_baik, 4),
                     'recall': round(rec_baik, 4),
                     'f1_score': round(f1_baik, 4),
@@ -448,6 +522,11 @@ class C45Classifier:
                 'presisi': round(macro_pre, 4),
                 'recall': round(macro_rec, 4),
                 'f1_score': round(macro_f1, 4),
+            },
+            'weighted_avg': {
+                'presisi': round(weighted_pre, 4),
+                'recall': round(weighted_rec, 4),
+                'f1_score': round(weighted_f1, 4),
             },
             'confusion_matrix': matrix,
             'labels': labels,

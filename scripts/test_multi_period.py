@@ -213,15 +213,18 @@ def run_tests():
         assert obs_created.periode_id == periode_2024_01.id, "Pengamatan harus tertaut ke periode_id"
         print(f"  ✓ Berhasil: Pengamatan wali kelas tertaut ke periode {obs_created.periode}.")
 
-        # 2. Coba eksploitasi BOLA: Tambah pengamatan untuk siswa kelas lain -> Harus ditolak!
+        # 2. Coba eksploitasi BOLA: Tambah pengamatan untuk siswa kelas lain -> Harus ditolak (HTTP 403 atau redirect flash)!
         res_bola = test_client.post('/walikelas/pengamatan/tambah', data={
             'siswa_id': siswa_kelas_lain.id,
             'periode_id': periode_2024_01.id,
             'catatan': 'Percobaan BOLA cross-class.',
             'skor_perilaku': 1
         }, follow_redirects=True)
-        assert res_bola.status_code == 200
-        assert b'Akses ditolak' in res_bola.data or b'binaan Anda' in res_bola.data
+        assert res_bola.status_code in (200, 403)
+        if res_bola.status_code == 200:
+            assert b'Akses ditolak' in res_bola.data or b'binaan Anda' in res_bola.data
+        else:
+            assert res_bola.status_code == 403
         obs_illegal = Pengamatan.query.filter_by(siswa_id=siswa_kelas_lain.id, pengamat_id=walikelas.id).first()
         assert obs_illegal is None, "Pengamatan ilegal lintas kelas tidak boleh tersimpan"
         print("  ✓ Berhasil: Proteksi BOLA mencegah pengamatan lintas kelas.")

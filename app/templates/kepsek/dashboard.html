@@ -5,7 +5,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
   <div>
     <h4 class="fw-bold text-dark mb-1">Dashboard Eksekutif Kepala Sekolah</h4>
-    <p class="text-muted small mb-0">Laporan makro kondisi sosial dan emosional seluruh siswa SMK Plus Khoiriyah Hasyim Tebuireng.</p>
+    <p class="text-muted small mb-0">Laporan agregat kondisi sosial dan emosional seluruh siswa SMK Plus Khoiriyah Hasyim Tebuireng.</p>
   </div>
   <div class="d-flex flex-wrap align-items-center gap-2">
     <form method="GET" class="d-inline-block">
@@ -18,69 +18,71 @@
         </select>
       </div>
     </form>
-    <a href="{{ url_for('kepsek.catatan_list') }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-journal-text me-1"></i> Catatan Wali Kelas & BK
+    <a href="{{ url_for('kepsek.penilaian_list') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-clipboard2-check me-1"></i> Monitoring Penilaian
     </a>
     <a href="{{ url_for('kepsek.laporan_index') }}" class="btn btn-primary btn-sm">
-      <i class="bi bi-printer me-1"></i> Cetak Laporan
+      <i class="bi bi-printer me-1"></i> Laporan Agregat
     </a>
   </div>
 </div>
 
-<!-- Metrics Cards -->
+<!-- 1. Metrics Cards (Agregat Total, Baik, Perlu Pendampingan, Persentase) -->
 <div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Populasi Siswa</span>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Populasi Siswa</span>
           <h2 class="fw-bold mb-0 text-dark">{{ total_siswa }}</h2>
+          <small class="text-muted" style="font-size: 0.72rem;">Total Sampling Jenuh</small>
         </div>
-        <div class="bg-primary-subtle text-primary rounded-circle p-3 fs-4">
+        <div class="bg-primary-subtle text-primary rounded-3 p-3 fs-4">
           <i class="bi bi-people-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-3">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Siswa Dinilai</span>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Siswa Dinilai</span>
           <h2 class="fw-bold mb-0 text-info">{{ total_dinilai }}</h2>
+          <small class="text-info" style="font-size: 0.72rem;">Periode {{ periode_terpilih }}</small>
         </div>
-        <div class="bg-info-subtle text-info rounded-circle p-3 fs-4">
+        <div class="bg-info-subtle text-info rounded-3 p-3 fs-4">
           <i class="bi bi-clipboard2-check-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-3">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Persentase Baik</span>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Kategori "Baik"</span>
           <h2 class="fw-bold mb-0 text-success">{{ pct_baik }}%</h2>
-          <small class="text-muted">({{ n_baik }} siswa)</small>
+          <small class="text-success fw-semibold" style="font-size: 0.72rem;">{{ n_baik }} dari {{ total_dinilai }} siswa</small>
         </div>
-        <div class="bg-success-subtle text-success rounded-circle p-3 fs-4">
+        <div class="bg-success-subtle text-success rounded-3 p-3 fs-4">
           <i class="bi bi-check-circle-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-3">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Perlu Pendampingan</span>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">"Perlu Pendampingan"</span>
           <h2 class="fw-bold mb-0 text-danger">{{ pct_pp }}%</h2>
-          <small class="text-muted">({{ n_pp }} siswa)</small>
+          <small class="text-danger fw-semibold" style="font-size: 0.72rem;">{{ n_pp }} butuh perhatian khusus</small>
         </div>
-        <div class="bg-danger-subtle text-danger rounded-circle p-3 fs-4">
+        <div class="bg-danger-subtle text-danger rounded-3 p-3 fs-4">
           <i class="bi bi-exclamation-triangle-fill"></i>
         </div>
       </div>
@@ -88,15 +90,16 @@
   </div>
 </div>
 
-<!-- Charts Row -->
+<!-- 2. Charts Row: Distribusi Hasil Berdasarkan Kelas & Komposisi Status -->
 <div class="row g-4 mb-4">
   <!-- Grafik Per Kelas -->
   <div class="col-lg-7">
-    <div class="card h-100">
-      <div class="card-header bg-white fw-bold">
-        <i class="bi bi-bar-chart-fill text-primary me-1"></i> Perbandingan Status Siswa per Kelas (Periode {{ periode_terpilih }})
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white py-3 fw-bold text-dark d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-bar-chart-fill text-primary me-2"></i>Distribusi Hasil Berdasarkan Kelas (Periode {{ periode_terpilih }})</span>
+        <span class="badge bg-light text-secondary border">Agregat Kelas</span>
       </div>
-      <div class="card-body">
+      <div class="card-body p-4">
         <div style="height: 280px; width: 100%;">
           <canvas id="chartPerKelas"></canvas>
         </div>
@@ -106,11 +109,11 @@
 
   <!-- Donut Chart Distribusi Status Keseluruhan -->
   <div class="col-lg-5">
-    <div class="card h-100">
-      <div class="card-header bg-white fw-bold">
-        <i class="bi bi-pie-chart-fill text-info me-1"></i> Komposisi Hasil Rekomendasi
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white py-3 fw-bold text-dark">
+        <i class="bi bi-pie-chart-fill text-info me-2"></i>Komposisi Rekomendasi Sekolah
       </div>
-      <div class="card-body d-flex flex-column justify-content-center align-items-center">
+      <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
         <div style="height: 240px; width: 100%;">
           <canvas id="chartStatusMakro"></canvas>
         </div>
@@ -119,28 +122,110 @@
   </div>
 </div>
 
-<!-- Tabel Ringkasan Eksekutif per Kelas -->
-<div class="card">
-  <div class="card-header bg-white fw-bold">
-    <i class="bi bi-table text-primary me-1"></i> Matriks Rekapitulasi per Kelas
+<!-- 3. Tren Perubahan Antarperiode (Jika Data Tersedia) -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white py-3 fw-bold text-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span><i class="bi bi-graph-up text-primary me-2"></i>Tren Perubahan Hasil Monitoring Antarperiode</span>
+    {% if ada_tren %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle">Data Tren Multi-Periode Aktif</span>
+    {% else %}
+      <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Status: Data Tren Belum Tersedia</span>
+    {% endif %}
+  </div>
+  <div class="card-body p-4">
+    {% if ada_tren %}
+      <div style="height: 260px; width: 100%;">
+        <canvas id="chartTrenPeriode"></canvas>
+      </div>
+    {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+        <h6 class="fw-bold text-dark mt-3 mb-1">Data Historis Antarperiode Belum Tersedia</h6>
+        <p class="text-muted small mb-0" style="max-width: 580px; margin: 0 auto;">
+          Sesuai ketentuan penelitian, grafik garis tren hanya dibentuk jika tersedia penilaian pada minimal dua periode pemantauan yang berbeda. Saat ini data penilaian terpusat pada satu periode aktif. Sistem tidak memalsukan garis tren jika riwayat belum mencukupi.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 4. Distribusi Berdasarkan Periode (Semua Periode) -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white py-3 fw-bold text-dark d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-calendar-range text-primary me-2"></i>Distribusi Hasil Berdasarkan Periode Pemantauan</span>
+    <span class="badge bg-light text-secondary border">Rekap Multi-Periode</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small text-center">
+        <thead class="table-light">
+          <tr>
+            <th class="text-start ps-3">Kode Periode</th>
+            <th>Total Dinilai</th>
+            <th>Kategori Baik</th>
+            <th>Perlu Pendampingan</th>
+            <th>Persentase Baik</th>
+            <th>Status Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pr, v in dist_periode.items() %}
+          {% set pct_b = (v.baik / v.total * 100)|round(1) if v.total > 0 else 0 %}
+          <tr>
+            <td class="text-start ps-3 fw-bold text-dark">{{ pr }}</td>
+            <td><span class="badge bg-light text-dark border">{{ v.total }}</span></td>
+            <td><span class="badge badge-baik px-2 py-1">{{ v.baik }}</span></td>
+            <td><span class="badge badge-pp px-2 py-1">{{ v.pp }}</span></td>
+            <td>
+              <div class="d-flex align-items-center justify-content-center gap-2">
+                <div class="progress" style="height: 6px; width: 60px;">
+                  <div class="progress-bar bg-success" role="progressbar" data-progress="{{ pct_b }}" style="width: 0;"></div>
+                </div>
+                <span class="fw-bold">{{ pct_b }}%</span>
+              </div>
+            </td>
+            <td>
+              {% if v.total > 0 %}
+                <span class="badge bg-success-subtle text-success">Tersedia ({{ v.total }} Siswa)</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-muted">Belum Ada Data</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">Belum ada riwayat periode tercatat.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Matriks Rekapitulasi per Kelas -->
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white py-3 fw-bold text-dark d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-table text-primary me-2"></i>Matriks Rekapitulasi per Kelas (Periode {{ periode_terpilih }})</span>
+    <span class="badge bg-light text-secondary border">Total Rombel: {{ ringkasan_kelas|length }}</span>
   </div>
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead>
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
         <tr>
-          <th>Nama Kelas</th>
+          <th class="ps-3">Nama Kelas</th>
           <th>Total Siswa</th>
           <th>Telah Dinilai</th>
-          <th>Siswa "Baik"</th>
-          <th>"Perlu Pendampingan"</th>
+          <th>Kategori Baik</th>
+          <th>Perlu Pendampingan</th>
           <th>Persentase "Baik"</th>
-          <th>Status Kondusivitas</th>
+          <th>Status Rombel</th>
         </tr>
       </thead>
       <tbody>
         {% for r in ringkasan_kelas %}
         <tr>
-          <td class="fw-bold text-dark">{{ r.kelas }}</td>
+          <td class="ps-3 fw-bold text-dark">{{ r.kelas }}</td>
           <td>{{ r.total_siswa }}</td>
           <td>{{ r.dinilai }}</td>
           <td><span class="badge badge-baik px-2 py-1">{{ r.baik }}</span></td>
@@ -155,11 +240,11 @@
           </td>
           <td>
             {% if r.persen_baik >= 75 %}
-              <span class="badge bg-success-subtle text-success">Sangat Baik</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Kondusif</span>
             {% elif r.persen_baik >= 50 %}
-              <span class="badge bg-warning-subtle text-warning">Cukup Perhatian</span>
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Cukup Perhatian</span>
             {% else %}
-              <span class="badge bg-danger-subtle text-danger">Prioritas Intervensi</span>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Prioritas Bimbingan</span>
             {% endif %}
           </td>
         </tr>
@@ -177,12 +262,15 @@
   "dataBaik": {{ ringkasan_kelas|map(attribute='baik')|list|tojson }},
   "dataPP": {{ ringkasan_kelas|map(attribute='perlu_pendampingan')|list|tojson }},
   "nBaik": {{ n_baik|tojson }},
-  "nPP": {{ n_pp|tojson }}
+  "nPP": {{ n_pp|tojson }},
+  "adaTren": {{ ada_tren|tojson }},
+  "trenLabels": {{ tren_labels|tojson }},
+  "trenBaik": {{ tren_baik|tojson }},
+  "trenPP": {{ tren_pp|tojson }}
 }
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // Set nilai progress bar secara aman
   document.querySelectorAll('.progress-bar[data-progress]').forEach(function (bar) {
     bar.style.width = bar.getAttribute('data-progress') + '%';
   });
@@ -191,60 +279,106 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!dataEl) return;
   const dashboardData = JSON.parse(dataEl.textContent);
 
-  // Chart Per Kelas
-  const ctxKelas = document.getElementById('chartPerKelas').getContext('2d');
-  new Chart(ctxKelas, {
-    type: 'bar',
-    data: {
-      labels: dashboardData.labelsKelas,
-      datasets: [
-        {
-          label: 'Siswa Baik',
-          data: dashboardData.dataBaik,
-          backgroundColor: '#16a34a'
-        },
-        {
-          label: 'Perlu Pendampingan',
-          data: dashboardData.dataPP,
-          backgroundColor: '#dc2626'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true }
+  // 1. Chart Per Kelas
+  const ctxKelas = document.getElementById('chartPerKelas');
+  if (ctxKelas) {
+    new Chart(ctxKelas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: dashboardData.labelsKelas,
+        datasets: [
+          {
+            label: 'Siswa Baik',
+            data: dashboardData.dataBaik,
+            backgroundColor: '#16a34a',
+            borderRadius: 4
+          },
+          {
+            label: 'Perlu Pendampingan',
+            data: dashboardData.dataPP,
+            backgroundColor: '#dc2626',
+            borderRadius: 4
+          }
+        ]
       },
-      plugins: {
-        legend: { position: 'bottom' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true }
+        },
+        plugins: {
+          legend: { position: 'bottom' }
+        }
       }
-    }
-  });
+    });
+  }
 
-  // Chart Donut Makro
-  const ctxMakro = document.getElementById('chartStatusMakro').getContext('2d');
-  new Chart(ctxMakro, {
-    type: 'doughnut',
-    data: {
-      labels: ['Baik', 'Perlu Pendampingan'],
-      datasets: [{
-        data: [dashboardData.nBaik, dashboardData.nPP],
-        backgroundColor: ['#16a34a', '#dc2626'],
-        borderWidth: 2,
-        borderColor: '#ffffff'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom' }
+  // 2. Chart Donut Status Makro
+  const ctxMakro = document.getElementById('chartStatusMakro');
+  if (ctxMakro) {
+    new Chart(ctxMakro.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Kategori Baik', 'Perlu Pendampingan'],
+        datasets: [{
+          data: [dashboardData.nBaik, dashboardData.nPP],
+          backgroundColor: ['#16a34a', '#dc2626'],
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
       }
+    });
+  }
+
+  // 3. Chart Tren Antarperiode (Jika Ada)
+  if (dashboardData.adaTren) {
+    const ctxTren = document.getElementById('chartTrenPeriode');
+    if (ctxTren) {
+      new Chart(ctxTren.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: dashboardData.trenLabels,
+          datasets: [
+            {
+              label: 'Kategori Baik',
+              data: dashboardData.trenBaik,
+              borderColor: '#16a34a',
+              backgroundColor: 'rgba(22, 163, 74, 0.1)',
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: 'Perlu Pendampingan',
+              data: dashboardData.trenPP,
+              borderColor: '#dc2626',
+              backgroundColor: 'rgba(220, 38, 38, 0.1)',
+              tension: 0.3,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
     }
-  });
+  }
 });
 </script>
 {% endblock %}
-

@@ -1,3 +1,4 @@
+import csv
 import io
 import json
 import os
@@ -18,6 +19,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user
+from werkzeug.utils import secure_filename
 from xhtml2pdf import pisa
 
 from app.auth.decorators import guru_bk_required
@@ -136,6 +138,7 @@ def dashboard():
 @guru_bk_required
 def penilaian_list():
     page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
     periode_id = request.args.get('periode_id', '').strip()
     periode = request.args.get('periode', '').strip()
     tahun_ajaran = request.args.get('tahun_ajaran', '').strip()
@@ -150,6 +153,8 @@ def penilaian_list():
     # Join Siswa dan Periode untuk mendukung multi-periode filter lengkap
     query = Penilaian.query.join(Siswa, Penilaian.siswa_id == Siswa.id).outerjoin(Periode, Penilaian.periode_id == Periode.id)
 
+    if search:
+        query = query.filter((Siswa.kode_siswa.ilike(f'%{search}%')) | (Siswa.nama.ilike(f'%{search}%')))
     filter_periode = periode_id or periode
     if filter_periode:
         query = query.filter((Penilaian.periode_id == filter_periode) | (Penilaian.periode == filter_periode))
@@ -181,6 +186,7 @@ def penilaian_list():
     return render_template(
         'bk/penilaian.html',
         pagination=pagination,
+        search=search,
         periode=filter_periode,
         periode_id=periode_id,
         tahun_ajaran=tahun_ajaran,
@@ -196,6 +202,273 @@ def penilaian_list():
         daftar_tahun_ajaran=daftar_tahun_ajaran,
         daftar_kelas=daftar_kelas,
         daftar_angkatan=daftar_angkatan
+    )
+
+
+# ── Unduh Template Format Import Excel ───────────────────────────────────────
+@bk_bp.route('/penilaian/template')
+@guru_bk_required
+def penilaian_template():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    if ws is None:
+        ws = wb.create_sheet(title="Format Import Penilaian")
+    else:
+        ws.title = "Format Import Penilaian"
+    assert ws is not None
+
+    headers = [
+        'Nomor Induk', 'Nama Siswa', 'Kelas', 'Angkatan', 'Jenis Kelamin (L/P)',
+        'IS1', 'IS2', 'IS3',
+        'RE1', 'RE2', 'RE3',
+        'EM1', 'EM2', 'EM3',
+        'KS1', 'KS2', 'KS3',
+        'Rekomendasi (Baik/Perlu Pendampingan)'
+    ]
+    ws.append(headers)
+
+    # Contoh data baris 1
+    sample = [
+        '1001', 'Siswa Contoh 1', 'MM A 2025', 2025, 'L',
+        3, 3, 3,
+        4, 4, 3,
+        3, 3, 4,
+        4, 3, 3,
+        'Baik'
+    ]
+    ws.append(sample)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        download_name="Template_Import_Penilaian_SIMONSEM.xlsx",
+        as_attachment=True,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+# ── Import Dataset Penilaian (Excel / CSV) ──────────────────────────────────
+@bk_bp.route('/penilaian/import', methods=['GET', 'POST'])
+@guru_bk_required
+def penilaian_import():
+    daftar_master_periode = Periode.query.order_by(Periode.is_active.desc(), Periode.tahun.desc(), Periode.bulan.desc()).all()
+    periode_aktif = Periode.query.filter_by(is_active=True).first() or (daftar_master_periode[0] if daftar_master_periode else None)
+
+    if request.method == 'POST':
+        if 'berkas' not in request.files:
+            flash('Tidak ada berkas yang dipilih.', 'danger')
+            return redirect(request.url)
+
+        file = request.files['berkas']
+        if not file or not file.filename:
+            flash('Nama berkas kosong. Silakan pilih berkas Excel (.xlsx/.xls) atau CSV.', 'danger')
+            return redirect(request.url)
+
+        raw_filename = file.filename
+        filename = secure_filename(raw_filename)
+        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        allowed_exts = current_app.config.get('ALLOWED_EXTENSIONS', {'xlsx', 'xls', 'csv'})
+
+        if ext not in allowed_exts:
+            flash(f'Tipe berkas .{ext} tidak diizinkan. Harap unggah berkas dengan format .xlsx, .xls, atau .csv.', 'danger')
+            return redirect(request.url)
+
+        # Cek ukuran berkas (Maks 5MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        max_size = current_app.config.get('MAX_CONTENT_LENGTH', 5 * 1024 * 1024)
+        if file_size > max_size:
+            flash(f'Ukuran berkas ({file_size / (1024*1024):.2f} MB) melebihi batas maksimal 5 MB.', 'danger')
+            return redirect(request.url)
+
+        periode_id_input = request.form.get('periode_id', '').strip()
+        periode_obj = Periode.query.get(periode_id_input) or periode_aktif
+        if not periode_obj:
+            flash('Periode penilaian tidak valid.', 'danger')
+            return redirect(request.url)
+
+        # Baca baris data
+        rows_data = []
+        try:
+            if ext in {'xlsx', 'xls'}:
+                wb = openpyxl.load_workbook(file.stream, data_only=True)
+                ws = wb.active
+                if ws is None:
+                    flash('Lembar kerja (sheet) Excel tidak ditemukan.', 'warning')
+                    return redirect(request.url)
+                raw_rows = list(ws.iter_rows(values_only=True))
+                if not raw_rows or len(raw_rows) < 2:
+                    flash('Berkas Excel kosong atau tidak memiliki baris data.', 'warning')
+                    return redirect(request.url)
+
+                headers = [str(h).strip().upper() if h is not None else '' for h in raw_rows[0]]
+                for r in raw_rows[1:]:
+                    if any(cell is not None and str(cell).strip() != '' for cell in r):
+                        row_dict = {}
+                        for idx, h in enumerate(headers):
+                            if idx < len(r):
+                                row_dict[h] = r[idx]
+                        rows_data.append(row_dict)
+            else:
+                stream = io.StringIO(file.stream.read().decode('utf-8-sig', errors='ignore'))
+                reader = csv.DictReader(stream)
+                for r in reader:
+                    cleaned_r = {str(k).strip().upper(): v for k, v in r.items() if k}
+                    if any(v is not None and str(v).strip() != '' for v in cleaned_r.values()):
+                        rows_data.append(cleaned_r)
+        except Exception as e:
+            flash(f'Gagal membaca dan memproses berkas: {e}', 'danger')
+            return redirect(request.url)
+
+        if not rows_data:
+            flash('Tidak ada baris data valid yang ditemukan pada berkas.', 'warning')
+            return redirect(request.url)
+
+        # Proses import per baris
+        n_sukses = 0
+        n_duplikat = 0
+        n_gagal = 0
+        laporan_validasi = []
+
+        kolom_indikator = ['IS1','IS2','IS3','RE1','RE2','RE3','EM1','EM2','EM3','KS1','KS2','KS3']
+
+        for baris_ke, r in enumerate(rows_data, start=2):
+            # Cari pengenal siswa
+            nomor_induk = str(r.get('NOMOR INDUK') or r.get('NIS') or r.get('NISN') or '').strip() or None
+            nama = str(r.get('NAMA SISWA') or r.get('NAMA') or '').strip()
+            kode_siswa = str(r.get('KODE SISWA') or r.get('KODE') or '').strip()
+            kelas = str(r.get('KELAS') or r.get('ROMBEL') or 'MM A 2025').strip()
+            angkatan_val = _parse_int(r.get('ANGKATAN'), 2025)
+            jk = str(r.get('JENIS KELAMIN (L/P)') or r.get('JENIS KELAMIN') or r.get('JK') or 'L').strip().upper()
+            if jk not in {'L', 'P'}:
+                jk = 'L'
+
+            # Validasi skor 12 variabel
+            skor_data = {}
+            for col in kolom_indikator:
+                val = r.get(col)
+                skor_data[col] = val
+
+            errs = validasi_skor(skor_data)
+            if errs:
+                n_gagal += 1
+                laporan_validasi.append(f"Baris {baris_ke} (Siswa: {nama or kode_siswa or '-'}): {', '.join(errs)}")
+                continue
+
+            # Cari atau buat Siswa
+            siswa = None
+            if kode_siswa:
+                siswa = Siswa.query.filter_by(kode_siswa=kode_siswa).first()
+            if not siswa and nomor_induk:
+                siswa = Siswa.query.filter_by(nomor_induk=nomor_induk).first()
+            if not siswa and nama:
+                siswa = Siswa.query.filter_by(nama=nama).first()
+
+            if not siswa:
+                # Generate kode anonim otomatis S001, S002, dst.
+                last_siswa = Siswa.query.order_by(Siswa.kode_siswa.desc()).first()
+                if last_siswa and last_siswa.kode_siswa.startswith('S') and last_siswa.kode_siswa[1:].isdigit():
+                    next_num = int(last_siswa.kode_siswa[1:]) + 1
+                else:
+                    next_num = Siswa.query.count() + 1
+                auto_kode = f"S{next_num:03d}"
+
+                siswa = Siswa(
+                    kode_siswa=auto_kode,
+                    nomor_induk=nomor_induk,
+                    nama=nama or f"Siswa {auto_kode}",
+                    kelas=kelas,
+                    angkatan=angkatan_val,
+                    jenis_kelamin=jk
+                )
+                db.session.add(siswa)
+                db.session.flush()
+
+            # Periksa duplikasi pada periode yang sama
+            existing_penilaian = Penilaian.query.filter(
+                Penilaian.siswa_id == siswa.id,
+                (Penilaian.periode_id == periode_obj.id) | (Penilaian.periode == periode_obj.kode_periode)
+            ).first()
+
+            if existing_penilaian:
+                n_duplikat += 1
+                laporan_validasi.append(f"Baris {baris_ke}: Siswa {siswa.kode_siswa} sudah memiliki penilaian pada periode {periode_obj.nama_periode} (dilewati).")
+                continue
+
+            # Target rekomendasi label
+            raw_label = str(r.get('REKOMENDASI (BAIK/PERLU PENDAMPINGAN)') or r.get('REKOMENDASI') or r.get('LABEL') or '').strip()
+            label_bersih = None
+            if 'perlu' in raw_label.lower():
+                label_bersih = LABEL_PP
+            elif 'baik' in raw_label.lower():
+                label_bersih = LABEL_BAIK
+            elif raw_label in {LABEL_BAIK, LABEL_PP}:
+                label_bersih = raw_label
+
+            penilaian = Penilaian(
+                siswa_id=siswa.id,
+                penilai_id=str(current_user.id),
+                periode_id=periode_obj.id,
+                periode=periode_obj.kode_periode,
+                IS1=_parse_int(skor_data['IS1']),
+                IS2=_parse_int(skor_data['IS2']),
+                IS3=_parse_int(skor_data['IS3']),
+                RE1=_parse_int(skor_data['RE1']),
+                RE2=_parse_int(skor_data['RE2']),
+                RE3=_parse_int(skor_data['RE3']),
+                EM1=_parse_int(skor_data['EM1']),
+                EM2=_parse_int(skor_data['EM2']),
+                EM3=_parse_int(skor_data['EM3']),
+                KS1=_parse_int(skor_data['KS1']),
+                KS2=_parse_int(skor_data['KS2']),
+                KS3=_parse_int(skor_data['KS3']),
+                label=label_bersih,
+                is_training=(label_bersih is not None),
+                versi_revisi=1
+            )
+            penilaian.hitung_dan_kategorikan()
+            prediksikan_penilaian(penilaian, user_id=str(current_user.id))
+
+            db.session.add(penilaian)
+            n_sukses += 1
+
+        catat_audit(
+            aksi='IMPORT_DATASET',
+            tabel='penilaian',
+            record_id=f"import_{filename}",
+            data_baru={'n_sukses': n_sukses, 'n_duplikat': n_duplikat, 'n_gagal': n_gagal, 'periode': periode_obj.kode_periode},
+            keterangan=f"Guru BK mengimpor dataset {filename}: {n_sukses} sukses, {n_duplikat} duplikat, {n_gagal} gagal",
+            user=current_user,
+            ip_address=request.remote_addr,
+            user_agent=request.user_agent.string
+        )
+
+        db.session.commit()
+
+        if n_sukses > 0:
+            flash(f'Import berhasil: {n_sukses} data penilaian siswa berhasil diimpor ke periode {periode_obj.nama_periode}.', 'success')
+        if n_duplikat > 0:
+            flash(f'{n_duplikat} data dilewati karena penilaian pada periode tersebut sudah ada.', 'info')
+        if n_gagal > 0:
+            flash(f'{n_gagal} baris data gagal divalidasi karena format/skor tidak sesuai rentang 1–4.', 'warning')
+
+        return render_template(
+            'bk/import_penilaian.html',
+            daftar_master_periode=daftar_master_periode,
+            periode_aktif=periode_aktif,
+            laporan_validasi=laporan_validasi,
+            hasil_import={'sukses': n_sukses, 'duplikat': n_duplikat, 'gagal': n_gagal}
+        )
+
+    return render_template(
+        'bk/import_penilaian.html',
+        daftar_master_periode=daftar_master_periode,
+        periode_aktif=periode_aktif,
+        laporan_validasi=None,
+        hasil_import=None
     )
 
 
@@ -238,7 +511,9 @@ def penilaian_tambah():
                 kode_s = siswa_obj.kode_siswa if siswa_obj else siswa_id
                 errors.append(f'Siswa {kode_s} sudah memiliki penilaian pada periode {periode_obj.nama_periode}. Silakan gunakan tombol Revisi jika ingin memperbarui nilai.')
 
-        if errors:
+        if errors or not periode_obj:
+            if not periode_obj:
+                errors.append('Periode penilaian tidak valid.')
             for err in errors:
                 flash(err, 'danger')
             return render_template(
@@ -248,6 +523,8 @@ def penilaian_tambah():
                 periode_aktif=periode_aktif,
                 edit=False
             )
+
+        assert periode_obj is not None
 
         siswa_obj = Siswa.query.get(siswa_id)
         kode_siswa = siswa_obj.kode_siswa if siswa_obj else siswa_id
@@ -442,13 +719,6 @@ def penilaian_hapus(id):
     db.session.commit()
     flash(f'Data penilaian siswa {kode_siswa} berhasil dihapus.', 'info')
     return redirect(url_for('bk.penilaian_list'))
-    p = Penilaian.query.get_or_404(id)
-    # Hapus hasil klasifikasi terkait terlebih dahulu
-    HasilKlasifikasi.query.filter_by(penilaian_id=p.id).delete()
-    db.session.delete(p)
-    db.session.commit()
-    flash('Data penilaian berhasil dihapus.', 'info')
-    return redirect(url_for('bk.penilaian_list'))
 
 
 # ── Model C4.5 & Pelatihan ──────────────────────────────────────────────────
@@ -462,17 +732,47 @@ def model_index():
     model_aktif = riwayat_model[0] if riwayat_model else None
     confusion_dict = {}
     metrik_detail_dict = {}
-    if model_aktif and model_aktif.confusion_matrix:
-        try:
-            confusion_dict = json.loads(model_aktif.confusion_matrix)
-        except (ValueError, TypeError):
-            confusion_dict = {}
+    dist_latih_dict = {}
+    dist_uji_dict = {}
+    detail_uji_list = []
+    param_split_dict = {}
 
-    if model_aktif and getattr(model_aktif, 'metrik_detail', None):
-        try:
-            metrik_detail_dict = json.loads(model_aktif.metrik_detail)
-        except (ValueError, TypeError):
-            metrik_detail_dict = {}
+    if model_aktif:
+        if model_aktif.confusion_matrix:
+            try:
+                confusion_dict = json.loads(model_aktif.confusion_matrix)
+            except (ValueError, TypeError):
+                confusion_dict = {}
+
+        if getattr(model_aktif, 'metrik_detail', None):
+            try:
+                metrik_detail_dict = json.loads(model_aktif.metrik_detail)
+            except (ValueError, TypeError):
+                metrik_detail_dict = {}
+
+        if getattr(model_aktif, 'dist_latih', None):
+            try:
+                dist_latih_dict = json.loads(model_aktif.dist_latih)
+            except (ValueError, TypeError):
+                dist_latih_dict = {}
+
+        if getattr(model_aktif, 'dist_uji', None):
+            try:
+                dist_uji_dict = json.loads(model_aktif.dist_uji)
+            except (ValueError, TypeError):
+                dist_uji_dict = {}
+
+        if getattr(model_aktif, 'detail_data_uji', None):
+            try:
+                detail_uji_list = json.loads(model_aktif.detail_data_uji)
+            except (ValueError, TypeError):
+                detail_uji_list = []
+
+        if getattr(model_aktif, 'parameter_split', None):
+            try:
+                param_split_dict = json.loads(model_aktif.parameter_split)
+            except (ValueError, TypeError):
+                param_split_dict = {}
 
     return render_template(
         'bk/model.html',
@@ -481,7 +781,11 @@ def model_index():
         aturan_aktif=aturan_aktif,
         model_aktif=model_aktif,
         confusion_dict=confusion_dict,
-        metrik_detail_dict=metrik_detail_dict
+        metrik_detail_dict=metrik_detail_dict,
+        dist_latih_dict=dist_latih_dict,
+        dist_uji_dict=dist_uji_dict,
+        detail_uji_list=detail_uji_list,
+        param_split_dict=param_split_dict
     )
 
 
@@ -505,16 +809,37 @@ def model_latih():
 
     versi = f"v{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-    # Latih model C4.5 murni
+    # Latih model C4.5 murni pada 160 data latih
     clf = C45Classifier(min_samples_split=2, max_depth=10)
     clf.fit(data_latih, FITUR, versi_model=versi)
 
-    # Evaluasi pada 40 data uji angkatan 2025
+    # Evaluasi murni pada 40 data uji angkatan 2025
     y_true = [d['label'] for d in data_uji]
     preds = clf.predict(data_uji)
     y_pred = [p[0] for p in preds]
 
     metrik = C45Classifier.evaluasi(y_true, y_pred)
+
+    # Rincian 40 Data Uji
+    detail_uji = []
+    for i, d in enumerate(data_uji, start=1):
+        pred, path, conf = clf.predict_one(d)
+        is_benar = (pred == d['label'])
+        detail_uji.append({
+            'no': i,
+            'kode_siswa': d.get('kode_siswa', '-'),
+            'kelas': d.get('kelas', '-'),
+            'angkatan': d.get('angkatan', 2025),
+            'IS': d.get('Interaksi Sosial', '-'),
+            'RE': d.get('Regulasi Emosi', '-'),
+            'EM': d.get('Empati', '-'),
+            'KS': d.get('Kerja Sama', '-'),
+            'label_aktual': d['label'],
+            'prediksi': pred,
+            'kepercayaan': conf,
+            'is_benar': is_benar,
+            'path_aturan': path
+        })
 
     # Simpan Aturan C4.5 ke tabel
     for r in clf.aturan:
@@ -528,7 +853,7 @@ def model_latih():
         )
         db.session.add(aturan)
 
-    # Simpan Log Model dengan pohon_json untuk persistensi permanen
+    # Simpan Log Model dengan pohon_json, rincian evaluasi & parameter persistensi permanen
     dilatih_oleh_id = getattr(current_user, 'id', None)
     log = LogModel(
         versi_model=versi,
@@ -540,10 +865,16 @@ def model_latih():
         recall=metrik['recall'],
         f1_score=metrik['f1_score'],
         confusion_matrix=json.dumps(metrik['confusion_matrix']),
-        metrik_detail=json.dumps(metrik.get('metrik_per_kelas', {})),
+        metrik_detail=json.dumps(metrik),
         pohon_json=json.dumps(clf.pohon_ke_dict()),
         n_aturan=len(clf.aturan),
         kedalaman_pohon=clf.depth(),
+        versi_algoritma="C4.5 (Quinlan, 1993)",
+        dist_latih=json.dumps(lap.get('dist_latih', {})),
+        dist_uji=json.dumps(lap.get('dist_uji', {})),
+        fitur_masukan=json.dumps(FITUR),
+        parameter_split=json.dumps({'test_size': 0.2, 'random_state': 42, 'stratified': True, 'target_angkatan_uji': 2025}),
+        detail_data_uji=json.dumps(detail_uji),
         dilatih_oleh=dilatih_oleh_id
     )
     db.session.add(log)
@@ -587,11 +918,21 @@ def model_pohon(versi):
             log.pohon_json = json.dumps(tree_dict)
             db.session.commit()
 
+    tabel_akar = None
+    penilaian_list = Penilaian.query.filter(Penilaian.label.isnot(None)).all()
+    if penilaian_list and len(penilaian_list) >= 5:
+        try:
+            data_latih, _, _ = siapkan_dataset(penilaian_list, test_size=0.2, random_state=42, target_angkatan_uji=2025)
+            tabel_akar = C45Classifier.hitung_perhitungan_simpul_akar(data_latih, FITUR)
+        except Exception as e:
+            current_app.logger.warning(f"Gagal hitung tabel akar: {e}")
+
     return render_template(
         'bk/pohon.html',
         versi=versi,
         tree_json=json.dumps(tree_dict),
         tree_text=tree_text,
+        tabel_akar=tabel_akar,
         log=log
     )
 
@@ -707,53 +1048,6 @@ def klasifikasi_jalankan():
     flash(f'Klasifikasi berhasil dijalankan untuk {count_sukses} data siswa menggunakan model {model_terbaru.versi_model}.', 'success')
     return redirect(url_for('bk.klasifikasi_index', periode=periode))
 
-    penilaian_target = Penilaian.query.filter_by(periode=periode).all() if periode else Penilaian.query.all()
-
-    count_sukses = 0
-    current_uid = getattr(current_user, 'id', None)
-    for p in penilaian_target:
-        row = {
-            'Interaksi Sosial': p.kat_IS,
-            'Regulasi Emosi': p.kat_RE,
-            'Empati': p.kat_EM,
-            'Kerja Sama': p.kat_KS
-        }
-        pred, path, conf = clf.predict_one(row)
-
-        hk = HasilKlasifikasi.query.filter_by(penilaian_id=p.id).first()
-        if not hk:
-            hk = HasilKlasifikasi(penilaian_id=p.id)
-            db.session.add(hk)
-
-        hk.versi_model = model_terbaru.versi_model
-        hk.prediksi = pred
-        hk.kepercayaan = conf
-        hk.path_aturan = path
-        hk.ditinjau_oleh = current_uid
-
-        # Sinkronkan kolom tracking di tabel Penilaian
-        p.prediksi_c45 = pred
-        p.kepercayaan_c45 = conf
-        p.versi_model = model_terbaru.versi_model
-        p.model_id = model_terbaru.id
-
-        count_sukses += 1
-
-    catat_audit(
-        aksi='KLASIFIKASI_MASAL',
-        tabel='penilaian',
-        record_id=f"batch_{periode or 'semua'}",
-        keterangan=f"Klasifikasi masal C4.5 model {model_terbaru.versi_model} pada {count_sukses} data penilaian",
-        user=current_user,
-        ip_address=request.remote_addr,
-        user_agent=request.user_agent.string
-    )
-
-    db.session.commit()
-    flash(f'Klasifikasi berhasil dijalankan untuk {count_sukses} data siswa menggunakan model {model_terbaru.versi_model}.', 'success')
-    return redirect(url_for('bk.klasifikasi_index', periode=periode))
-
-
 @bk_bp.route('/klasifikasi/<id>/tinjau', methods=['POST'])
 @guru_bk_required
 def klasifikasi_tinjau(id):
@@ -794,6 +1088,8 @@ def laporan_excel():
     tahun = request.args.get('tahun', type=int)
     kelas = request.args.get('kelas', '').strip()
     angkatan = request.args.get('angkatan', type=int)
+    label = request.args.get('label', '').strip()
+    status_data = request.args.get('status_data', '').strip()
 
     query = Penilaian.query.join(Siswa, Penilaian.siswa_id == Siswa.id).outerjoin(Periode, Penilaian.periode_id == Periode.id).outerjoin(HasilKlasifikasi)
     if periode_input:
@@ -810,14 +1106,22 @@ def laporan_excel():
         query = query.filter(Siswa.kelas == kelas)
     if angkatan:
         query = query.filter(Siswa.angkatan == angkatan)
+    if label:
+        query = query.filter((Penilaian.label == label) | (Penilaian.prediksi_c45 == label) | (HasilKlasifikasi.prediksi == label))
+    if status_data == 'berlabel':
+        query = query.filter(Penilaian.label.isnot(None), Penilaian.label != '')
+    elif status_data == 'prediksi':
+        query = query.filter((Penilaian.prediksi_c45.isnot(None)) | (HasilKlasifikasi.id.isnot(None)))
 
     data = query.order_by(Siswa.kode_siswa).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
     if ws is None:
-        ws = wb.create_sheet()
-    ws.title = "Laporan Monitoring"
+        ws = wb.create_sheet(title="Laporan Monitoring")
+    else:
+        ws.title = "Laporan Monitoring"
+    assert ws is not None
 
     headers = [
         'No', 'Kode Siswa', 'Kelas', 'Angkatan', 'Periode', 'Rev',
@@ -867,6 +1171,8 @@ def laporan_pdf():
     tahun = request.args.get('tahun', type=int)
     kelas = request.args.get('kelas', '').strip()
     angkatan = request.args.get('angkatan', type=int)
+    label = request.args.get('label', '').strip()
+    status_data = request.args.get('status_data', '').strip()
 
     query = Penilaian.query.join(Siswa, Penilaian.siswa_id == Siswa.id).outerjoin(Periode, Penilaian.periode_id == Periode.id).outerjoin(HasilKlasifikasi)
     if periode_input:
@@ -883,6 +1189,12 @@ def laporan_pdf():
         query = query.filter(Siswa.kelas == kelas)
     if angkatan:
         query = query.filter(Siswa.angkatan == angkatan)
+    if label:
+        query = query.filter((Penilaian.label == label) | (Penilaian.prediksi_c45 == label) | (HasilKlasifikasi.prediksi == label))
+    if status_data == 'berlabel':
+        query = query.filter(Penilaian.label.isnot(None), Penilaian.label != '')
+    elif status_data == 'prediksi':
+        query = query.filter((Penilaian.prediksi_c45.isnot(None)) | (HasilKlasifikasi.id.isnot(None)))
 
     daftar_penilaian = query.order_by(Siswa.kode_siswa).all()
     model_terbaru = LogModel.query.order_by(LogModel.created_at.desc()).first()
@@ -894,6 +1206,8 @@ def laporan_pdf():
         periode=periode_input or 'Semua Periode',
         kelas=kelas or 'Semua Kelas',
         angkatan=angkatan or 'Semua Angkatan',
+        label=label,
+        status_data=status_data,
         model_terbaru=model_terbaru,
         tanggal_cetak=datetime.now().strftime('%d %B %Y'),
         logo_path=logo_path if os.path.exists(logo_path) else None

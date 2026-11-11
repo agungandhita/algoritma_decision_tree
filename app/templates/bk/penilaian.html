@@ -7,16 +7,28 @@
     <h4 class="fw-bold text-dark mb-1">Data Penilaian Siswa</h4>
     <p class="text-muted small mb-0">Pemantauan multi-periode skor 12 indikator, kategori perkembangan, dan hasil klasifikasi C4.5.</p>
   </div>
-  <a href="{{ url_for('bk.penilaian_tambah') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-circle me-1"></i> Input Penilaian Baru
-  </a>
+  <div>
+    <a href="{{ url_for('bk.penilaian_import') }}" class="btn btn-outline-success btn-sm me-2">
+      <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Excel/CSV
+    </a>
+    <a href="{{ url_for('bk.penilaian_tambah') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-circle me-1"></i> Input Penilaian Baru
+    </a>
+  </div>
 </div>
 
-<!-- Multi-Period Filter Bar -->
+<!-- Multi-Period & Attribute Filter Bar -->
 <div class="card mb-4 shadow-sm border-0">
   <div class="card-body p-3 bg-light rounded">
     <form method="GET" class="row g-2 align-items-end">
       <div class="col-md-3">
+        <label class="form-label small fw-semibold text-secondary mb-1">Cari Siswa</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" name="search" placeholder="Kode atau nama..." value="{{ search or '' }}">
+        </div>
+      </div>
+      <div class="col-md-2">
         <label class="form-label small fw-semibold text-secondary mb-1">Periode Monitoring</label>
         <select class="form-select form-select-sm" name="periode">
           <option value="">Semua Periode</option>
@@ -28,23 +40,6 @@
         </select>
       </div>
       <div class="col-md-2">
-        <label class="form-label small fw-semibold text-secondary mb-1">Tahun Ajaran</label>
-        <select class="form-select form-select-sm" name="tahun_ajaran">
-          <option value="">Semua Thn Ajaran</option>
-          {% for ta in daftar_tahun_ajaran %}
-            <option value="{{ ta }}" {% if tahun_ajaran == ta %}selected{% endif %}>{{ ta }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-semibold text-secondary mb-1">Semester</label>
-        <select class="form-select form-select-sm" name="semester">
-          <option value="">Semua Semester</option>
-          <option value="Ganjil" {% if semester == 'Ganjil' %}selected{% endif %}>Ganjil</option>
-          <option value="Genap" {% if semester == 'Genap' %}selected{% endif %}>Genap</option>
-        </select>
-      </div>
-      <div class="col-md-2">
         <label class="form-label small fw-semibold text-secondary mb-1">Kelas Siswa</label>
         <select class="form-select form-select-sm" name="kelas">
           <option value="">Semua Kelas</option>
@@ -53,18 +48,25 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-1">
-        <label class="form-label small fw-semibold text-secondary mb-1">Angkatan</label>
-        <select class="form-select form-select-sm" name="angkatan">
-          <option value="">Semua</option>
-          {% for a in daftar_angkatan %}
-            <option value="{{ a }}" {% if angkatan == a %}selected{% endif %}>{{ a }}</option>
-          {% endfor %}
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-secondary mb-1">Label Target BK</label>
+        <select class="form-select form-select-sm" name="label">
+          <option value="">Semua Label</option>
+          <option value="Baik" {% if label == 'Baik' %}selected{% endif %}>Baik</option>
+          <option value="Perlu Pendampingan" {% if label == 'Perlu Pendampingan' %}selected{% endif %}>Perlu Pendampingan</option>
         </select>
       </div>
-      <div class="col-md-2 d-flex gap-1">
-        <button type="submit" class="btn btn-primary btn-sm flex-fill">
-          <i class="bi bi-funnel-fill me-1"></i> Filter
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-secondary mb-1">Prediksi C4.5</label>
+        <select class="form-select form-select-sm" name="prediksi">
+          <option value="">Semua Prediksi</option>
+          <option value="Baik" {% if prediksi == 'Baik' %}selected{% endif %}>Baik</option>
+          <option value="Perlu Pendampingan" {% if prediksi == 'Perlu Pendampingan' %}selected{% endif %}>Perlu Pendampingan</option>
+        </select>
+      </div>
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Terapkan Filter">
+          <i class="bi bi-funnel-fill"></i>
         </button>
         <a href="{{ url_for('bk.penilaian_list') }}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
           <i class="bi bi-arrow-counterclockwise"></i>

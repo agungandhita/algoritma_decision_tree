@@ -1,6 +1,23 @@
 // SIMONSEM Interactive JavaScript
 
 document.addEventListener('DOMContentLoaded', function () {
+  // Mobile Sidebar Toggle
+  const sidebar = document.getElementById('appSidebar');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+  if (sidebar && sidebarToggle && sidebarBackdrop) {
+    sidebarToggle.addEventListener('click', function () {
+      sidebar.classList.toggle('show');
+      sidebarBackdrop.classList.toggle('show');
+    });
+
+    sidebarBackdrop.addEventListener('click', function () {
+      sidebar.classList.remove('show');
+      sidebarBackdrop.classList.remove('show');
+    });
+  }
+
   // Auto dismiss alert flashes after 5 seconds
   const alerts = document.querySelectorAll('.alert-dismissible');
   alerts.forEach(function (alert) {
@@ -8,6 +25,14 @@ document.addEventListener('DOMContentLoaded', function () {
       const bsAlert = new bootstrap.Alert(alert);
       bsAlert.close();
     }, 5000);
+  });
+
+  // Dynamic progress bars based on data-progress
+  document.querySelectorAll('.progress-bar[data-progress]').forEach(function (bar) {
+    const val = bar.getAttribute('data-progress');
+    if (val !== null && val !== '') {
+      bar.style.width = val + '%';
+    }
   });
 
   // Real-time calculation on form penilaian

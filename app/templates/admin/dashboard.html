@@ -2,101 +2,110 @@
 {% block title %}Dashboard Administrator{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
   <div>
     <h4 class="fw-bold text-dark mb-1">Dashboard Administrator</h4>
-    <p class="text-muted small mb-0">Ringkasan pengguna, data siswa, dan status operasional sistem.</p>
+    <p class="text-muted small mb-0">Pemantauan operasional pengguna, integritas data siswa, rombongan belajar, dan rekam audit sistem.</p>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex flex-wrap gap-2">
     <a href="{{ url_for('admin.siswa_tambah') }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-person-plus"></i> Tambah Siswa
+      <i class="bi bi-person-plus me-1"></i> Tambah Siswa
+    </a>
+    <a href="{{ url_for('admin.kelas_list') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-mortarboard me-1"></i> Kelola Kelas
     </a>
     <a href="{{ url_for('admin.pengguna_tambah') }}" class="btn btn-primary btn-sm">
-      <i class="bi bi-person-fill-add"></i> Tambah Pengguna
+      <i class="bi bi-person-fill-add me-1"></i> Tambah Pengguna
     </a>
   </div>
 </div>
 
-<!-- Metrics Cards -->
+<!-- 1. Enam Metrik Utama Sistem -->
 <div class="row g-3 mb-4">
-  <div class="col-md-4 col-xl-2">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-4 col-xl-2">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Pengguna</span>
-          <h3 class="fw-bold mb-0 text-dark">{{ total_pengguna }}</h3>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Total Siswa</span>
+          <h3 class="fw-bold mb-0 text-dark">{{ total_siswa }}</h3>
+          <small class="text-success fw-semibold" style="font-size: 0.72rem;"><i class="bi bi-check-circle-fill"></i> Total Sampling</small>
         </div>
-        <div class="bg-primary-subtle text-primary rounded-circle p-2 fs-5">
-          <i class="bi bi-people-fill"></i>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-4 col-xl-2">
-    <div class="card card-metric p-3">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <span class="text-muted small fw-semibold text-uppercase">Siswa Aktif</span>
-          <h3 class="fw-bold mb-0 text-success">{{ total_siswa }}</h3>
-        </div>
-        <div class="bg-success-subtle text-success rounded-circle p-2 fs-5">
+        <div class="bg-primary-subtle text-primary rounded-3 p-2 fs-5">
           <i class="bi bi-person-lines-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4 col-xl-2">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-4 col-xl-2">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Penilaian</span>
-          <h3 class="fw-bold mb-0 text-info">{{ total_penilaian }}</h3>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Total Pengguna</span>
+          <h3 class="fw-bold mb-0 text-dark">{{ total_pengguna }}</h3>
+          <small class="text-muted" style="font-size: 0.72rem;">4 Peran Aktif</small>
         </div>
-        <div class="bg-info-subtle text-info rounded-circle p-2 fs-5">
-          <i class="bi bi-clipboard2-check-fill"></i>
+        <div class="bg-info-subtle text-info rounded-3 p-2 fs-5">
+          <i class="bi bi-people-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4 col-xl-2">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-4 col-xl-2">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Aturan C4.5</span>
-          <h3 class="fw-bold mb-0 text-warning">{{ total_aturan }}</h3>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Total Kelas</span>
+          <h3 class="fw-bold mb-0 text-dark">{{ total_kelas }}</h3>
+          <small class="text-muted" style="font-size: 0.72rem;">Rombel Multimedia</small>
         </div>
-        <div class="bg-warning-subtle text-warning rounded-circle p-2 fs-5">
-          <i class="bi bi-diagram-2-fill"></i>
+        <div class="bg-warning-subtle text-warning rounded-3 p-2 fs-5">
+          <i class="bi bi-mortarboard-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4 col-xl-2">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-4 col-xl-2">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Periode</span>
-          <h3 class="fw-bold mb-0 text-primary">{{ total_periode }}</h3>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Total Periode</span>
+          <h3 class="fw-bold mb-0 text-dark">{{ total_periode }}</h3>
+          <small class="text-primary fw-semibold" style="font-size: 0.72rem;">Multi-Periode</small>
         </div>
-        <div class="bg-primary-subtle text-primary rounded-circle p-2 fs-5">
+        <div class="bg-secondary-subtle text-secondary rounded-3 p-2 fs-5">
           <i class="bi bi-calendar-range-fill"></i>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4 col-xl-2">
-    <div class="card card-metric p-3">
+  <div class="col-sm-6 col-lg-4 col-xl-2">
+    <div class="card card-metric p-3 h-100">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <span class="text-muted small fw-semibold text-uppercase">Audit Trail</span>
-          <h3 class="fw-bold mb-0 text-secondary">{{ total_audit }}</h3>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Total Penilaian</span>
+          <h3 class="fw-bold mb-0 text-success">{{ total_penilaian }}</h3>
+          <small class="text-success" style="font-size: 0.72rem;">12 Variabel Valid</small>
         </div>
-        <div class="bg-secondary-subtle text-secondary rounded-circle p-2 fs-5">
+        <div class="bg-success-subtle text-success rounded-3 p-2 fs-5">
+          <i class="bi bi-clipboard2-check-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-4 col-xl-2">
+    <div class="card card-metric p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem;">Audit Log</span>
+          <h3 class="fw-bold mb-0 text-dark">{{ total_audit }}</h3>
+          <small class="text-muted" style="font-size: 0.72rem;">Mutasi Terekam</small>
+        </div>
+        <div class="bg-dark-subtle text-dark rounded-3 p-2 fs-5">
           <i class="bi bi-journal-code"></i>
         </div>
       </div>
@@ -104,78 +113,169 @@
   </div>
 </div>
 
-<div class="row g-4">
-  <!-- Tabel Pengguna Terbaru -->
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-bold text-dark"><i class="bi bi-people me-1"></i> Pengguna Terbaru</span>
-        <a href="{{ url_for('admin.pengguna_list') }}" class="btn btn-link btn-sm text-decoration-none">Lihat Semua</a>
+<!-- 2. Status Kelengkapan Dataset Penelitian -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body p-4">
+    <div class="row align-items-center g-3">
+      <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+            <i class="bi bi-shield-check me-1"></i> {{ status_kelengkapan.status_teks }}
+          </span>
+          <span class="badge bg-light text-secondary border">Total Sampling (Sampling Jenuh)</span>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">Status Kelengkapan Dataset Penelitian Skripsi</h5>
+        <p class="text-muted small mb-3">
+          Objek: <strong>SMK Plus Khoiriyah Hasyim Tebuireng</strong> (Angkatan 2023–2026). Seluruh <strong>{{ status_kelengkapan.populasi_total }} siswa</strong> terdaftar lengkap dalam basis data dengan 12 skor variabel indikator (rentang 1–4) dan kategori 4 aspek sosial-emosional tanpa sampel acak Slovin.
+        </p>
+        <div class="d-flex align-items-center gap-3">
+          <div class="progress flex-grow-1" style="height: 10px;">
+            <div class="progress-bar bg-success" role="progressbar" data-progress="{{ status_kelengkapan.persentase }}" style="width: 0;" aria-valuenow="{{ status_kelengkapan.persentase }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <span class="fw-bold text-success">{{ status_kelengkapan.persentase }}% Lengkap</span>
+        </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Nama Lengkap</th>
-              <th>Username</th>
-              <th>Peran</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in pengguna_terbaru %}
-            <tr>
-              <td class="fw-semibold text-dark">{{ u.nama_lengkap }}</td>
-              <td><code>{{ u.username }}</code></td>
-              <td>
-                <span class="badge bg-secondary-subtle text-secondary text-uppercase">{{ u.peran.replace('_', ' ') }}</span>
-              </td>
-              <td>
-                {% if u.is_active %}
-                  <span class="badge bg-success-subtle text-success">Aktif</span>
-                {% else %}
-                  <span class="badge bg-danger-subtle text-danger">Nonaktif</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+
+      <div class="col-lg-4 border-start-lg ps-lg-4">
+        <div class="d-flex flex-column gap-2 small">
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Populasi & Sampel Penelitian:</span>
+            <span class="fw-bold text-dark">{{ status_kelengkapan.populasi_total }} Siswa</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Siswa Memiliki Penilaian:</span>
+            <span class="fw-bold text-success">{{ status_kelengkapan.siswa_dinilai }} Siswa (100%)</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Penilaian Berlabel Target:</span>
+            <span class="fw-bold text-primary">{{ status_kelengkapan.penilaian_berlabel }} Siswa</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Metrik Model C4.5:</span>
+            <span class="badge bg-secondary">Terkunci (Hanya Guru BK)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- 3. Aktivitas Sistem (Audit Trail Log Terbaru) -->
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold text-dark mb-0">
+          <i class="bi bi-clock-history text-primary me-2"></i>Aktivitas Sistem Terbaru (Audit Trail)
+        </h6>
+        <a href="{{ url_for('admin.audit_trail_list') }}" class="btn btn-link btn-sm text-decoration-none">
+          Lihat Semua Log <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Waktu</th>
+                <th>Pengguna</th>
+                <th>Aksi</th>
+                <th>Tabel</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for act in aktivitas_terbaru %}
+              <tr>
+                <td class="ps-3 text-muted text-nowrap" style="font-size: 0.75rem;">
+                  {{ act.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </td>
+                <td class="fw-semibold text-dark text-nowrap">
+                  {{ act.user.nama_lengkap if act.user else (act.user_id or 'Sistem') }}
+                </td>
+                <td>
+                  {% if act.aksi == 'TAMBAH' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">TAMBAH</span>
+                  {% elif act.aksi == 'UBAH_STATUS' %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">STATUS</span>
+                  {% elif act.aksi == 'REVISI' %}
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">REVISI</span>
+                  {% elif act.aksi == 'IMPORT_DATASET' %}
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">IMPORT</span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary">{{ act.aksi }}</span>
+                  {% endif %}
+                </td>
+                <td><code class="text-secondary">{{ act.tabel }}</code></td>
+                <td class="text-muted text-truncate" style="max-width: 200px;" title="{{ act.keterangan }}">
+                  {{ act.keterangan }}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">Belum ada aktivitas terekam.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Tabel Siswa Terbaru -->
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-bold text-dark"><i class="bi bi-person-badge me-1"></i> Siswa Terdaftar (Sampel)</span>
-        <a href="{{ url_for('admin.siswa_list') }}" class="btn btn-link btn-sm text-decoration-none">Lihat Semua</a>
+  <!-- 4. Pengguna & Akses Terdaftar -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold text-dark mb-0">
+          <i class="bi bi-shield-lock text-primary me-2"></i>Pengguna & Peran Sistem
+        </h6>
+        <a href="{{ url_for('admin.pengguna_list') }}" class="btn btn-link btn-sm text-decoration-none">
+          Kelola <i class="bi bi-arrow-right"></i>
+        </a>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Nama Lengkap</th>
-              <th>Kelas</th>
-              <th>Angkatan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for s in siswa_terbaru %}
-            <tr>
-              <td><span class="badge bg-primary text-white fw-bold">{{ s.kode_siswa }}</span></td>
-              <td class="fw-semibold">{{ s.nama }}</td>
-              <td><span class="badge bg-info-subtle text-info">{{ s.kelas }}</span></td>
-              <td>{{ s.angkatan }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Nama</th>
+                <th>Peran</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in pengguna_terbaru %}
+              <tr>
+                <td class="ps-3">
+                  <div class="fw-semibold text-dark">{{ u.nama_lengkap }}</div>
+                  <small class="text-muted">{{ u.username }}</small>
+                </td>
+                <td>
+                  {% if u.peran == 'admin' %}
+                    <span class="badge bg-dark">Admin</span>
+                  {% elif u.peran == 'guru_bk' %}
+                    <span class="badge bg-primary">Guru BK</span>
+                  {% elif u.peran == 'wali_kelas' %}
+                    <span class="badge bg-info text-dark">Wali Kelas</span>
+                  {% elif u.peran == 'kepala_sekolah' %}
+                    <span class="badge bg-warning text-dark">Kepsek</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if u.is_active %}
+                    <span class="badge bg-success-subtle text-success">Aktif</span>
+                  {% else %}
+                    <span class="badge bg-danger-subtle text-danger">Nonaktif</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
-

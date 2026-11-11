@@ -7,6 +7,7 @@ import openpyxl
 from flask import (
     Blueprint,
     Response,
+    abort,
     current_app,
     flash,
     redirect,
@@ -83,6 +84,26 @@ def dashboard():
             'persen_baik': pct_k
         })
 
+    # Distribusi Agregat Berdasarkan Periode
+    semua_penilaian = Penilaian.query.all()
+    dist_periode = {}
+    for p in semua_penilaian:
+        pr_kode = p.periode or 'Lainnya'
+        if pr_kode not in dist_periode:
+            dist_periode[pr_kode] = {'total': 0, 'baik': 0, 'pp': 0}
+        dist_periode[pr_kode]['total'] += 1
+        lbl = p.prediksi_c45 or p.label
+        if lbl == 'Baik':
+            dist_periode[pr_kode]['baik'] += 1
+        elif lbl == 'Perlu Pendampingan':
+            dist_periode[pr_kode]['pp'] += 1
+
+    periode_aktif_data = [pr for pr, v in dist_periode.items() if v['total'] > 0]
+    ada_tren = len(periode_aktif_data) >= 2
+    tren_labels = sorted(periode_aktif_data)
+    tren_baik = [dist_periode[pr]['baik'] for pr in tren_labels]
+    tren_pp = [dist_periode[pr]['pp'] for pr in tren_labels]
+
     return render_template(
         'kepsek/dashboard.html',
         daftar_master_periode=daftar_master_periode,
@@ -98,7 +119,12 @@ def dashboard():
         dist_re=dist_re,
         dist_em=dist_em,
         dist_ks=dist_ks,
-        ringkasan_kelas=ringkasan_kelas
+        ringkasan_kelas=ringkasan_kelas,
+        dist_periode=dist_periode,
+        ada_tren=ada_tren,
+        tren_labels=tren_labels,
+        tren_baik=tren_baik,
+        tren_pp=tren_pp
     )
 
 
@@ -106,8 +132,7 @@ def dashboard():
 @kepsek_bp.route('/catatan')
 @kepsek_required
 def catatan_list():
-    flash('Sesuai ketentuan privasi dan metodologi, Kepala Sekolah hanya mengakses dashboard monitoring dan laporan agregat sekolah, tidak diperkenankan mengakses catatan konseling individual siswa.', 'info')
-    return redirect(url_for('kepsek.dashboard'))
+    abort(403, description="Akses dibatasi: Sesuai regulasi privasi bimbingan konseling, Kepala Sekolah hanya mengakses statistik monitoring dan laporan agregat sekolah, tidak diperkenankan mengakses catatan konseling individual siswa.")
 
 
 # ── Laporan Monitoring Agregat (PDF & Excel) ─────────────────────────────────
@@ -126,14 +151,22 @@ def laporan_excel():
     periode = request.args.get('periode', '').strip()
     kelas = request.args.get('kelas', '').strip()
     angkatan = request.args.get('angkatan', type=int)
+    label = request.args.get('label', '').strip()
+    status_data = request.args.get('status_data', '').strip()
 
     query = Penilaian.query.join(Siswa).outerjoin(HasilKlasifikasi)
     if periode:
-        query = query.filter(Penilaian.periode == periode)
+        query = query.filter((Penilaian.periode == periode) | (Penilaian.periode_id == periode))
     if kelas:
         query = query.filter(Siswa.kelas == kelas)
     if angkatan:
         query = query.filter(Siswa.angkatan == angkatan)
+    if label:
+        query = query.filter((Penilaian.label == label) | (Penilaian.prediksi_c45 == label) | (HasilKlasifikasi.prediksi == label))
+    if status_data == 'berlabel':
+        query = query.filter(Penilaian.label.isnot(None), Penilaian.label != '')
+    elif status_data == 'prediksi':
+        query = query.filter((Penilaian.prediksi_c45.isnot(None)) | (HasilKlasifikasi.id.isnot(None)))
 
     data = query.order_by(Siswa.kode_siswa).all()
 
@@ -155,8 +188,9 @@ def laporan_excel():
 
     for i, p in enumerate(data, start=1):
         hk = p.hasil_klasifikasi.first()
-        prediksi = hk.prediksi if hk else '-'
-        conf = f"{hk.kepercayaan*100:.1f}%" if hk and hk.kepercayaan else '-'
+        prediksi = p.prediksi_c45 or (hk.prediksi if hk else '-')
+        conf_val = p.kepercayaan_c45 if p.kepercayaan_c45 is not None else (hk.kepercayaan if hk else None)
+        conf = f"{conf_val*100:.1f}%" if conf_val is not None else '-'
 
         kode_siswa = p.siswa.kode_siswa if getattr(p, 'siswa', None) else p.siswa_id
         kelas_siswa = p.siswa.kelas if getattr(p, 'siswa', None) else '-'
@@ -186,14 +220,22 @@ def laporan_pdf():
     periode = request.args.get('periode', '').strip()
     kelas = request.args.get('kelas', '').strip()
     angkatan = request.args.get('angkatan', type=int)
+    label = request.args.get('label', '').strip()
+    status_data = request.args.get('status_data', '').strip()
 
     query = Penilaian.query.join(Siswa).outerjoin(HasilKlasifikasi)
     if periode:
-        query = query.filter(Penilaian.periode == periode)
+        query = query.filter((Penilaian.periode == periode) | (Penilaian.periode_id == periode))
     if kelas:
         query = query.filter(Siswa.kelas == kelas)
     if angkatan:
         query = query.filter(Siswa.angkatan == angkatan)
+    if label:
+        query = query.filter((Penilaian.label == label) | (Penilaian.prediksi_c45 == label) | (HasilKlasifikasi.prediksi == label))
+    if status_data == 'berlabel':
+        query = query.filter(Penilaian.label.isnot(None), Penilaian.label != '')
+    elif status_data == 'prediksi':
+        query = query.filter((Penilaian.prediksi_c45.isnot(None)) | (HasilKlasifikasi.id.isnot(None)))
 
     daftar_penilaian = query.order_by(Siswa.kode_siswa).all()
     model_terbaru = LogModel.query.order_by(LogModel.created_at.desc()).first()
@@ -205,6 +247,8 @@ def laporan_pdf():
         periode=periode or 'Semua Periode',
         kelas=kelas or 'Semua Kelas',
         angkatan=angkatan or 'Semua Angkatan',
+        label=label,
+        status_data=status_data,
         model_terbaru=model_terbaru,
         tanggal_cetak=datetime.now().strftime('%d %B %Y'),
         logo_path=logo_path if os.path.exists(logo_path) else None
@@ -227,6 +271,7 @@ def laporan_pdf():
 @kepsek_required
 def penilaian_list():
     page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
     periode = request.args.get('periode', '').strip()
     kelas = request.args.get('kelas', '').strip()
     angkatan = request.args.get('angkatan', type=int)
@@ -234,6 +279,8 @@ def penilaian_list():
 
     query = Penilaian.query.join(Siswa)
 
+    if search:
+        query = query.filter(Siswa.kode_siswa.ilike(f'%{search}%'))
     if periode:
         query = query.filter(Penilaian.periode == periode)
     if kelas:
@@ -252,6 +299,7 @@ def penilaian_list():
     return render_template(
         'kepsek/penilaian.html',
         pagination=pagination,
+        search=search,
         periode=periode,
         kelas=kelas,
         angkatan=angkatan,
@@ -265,7 +313,6 @@ def penilaian_list():
 @kepsek_bp.route('/penilaian/<id>')
 @kepsek_required
 def penilaian_detail(id):
-    flash('Detail penilaian individual siswa dibatasi demi privasi bimbingan konseling. Kepala Sekolah mengakses rekapitulasi pada dashboard dan laporan agregat.', 'info')
-    return redirect(url_for('kepsek.dashboard'))
+    abort(403, description="Akses dibatasi: Detail penilaian individual siswa dibatasi demi privasi bimbingan konseling. Kepala Sekolah mengakses rekapitulasi pada dashboard dan laporan agregat.")
 
 

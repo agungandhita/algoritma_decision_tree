@@ -37,13 +37,31 @@
             </select>
           </div>
 
-          <div class="mb-4">
+          <div class="mb-3">
             <label for="angkatan" class="form-label fw-semibold small">Pilih Angkatan / Tahun Jenjang</label>
             <select class="form-select" id="angkatan" name="angkatan">
               <option value="">Semua Angkatan</option>
               {% for a in daftar_angkatan %}
                 <option value="{{ a }}">Angkatan {{ a }}</option>
               {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="label" class="form-label fw-semibold small">Filter Kategori Hasil / Rekomendasi</label>
+            <select class="form-select" id="label" name="label">
+              <option value="">Semua Kategori (Baik & Perlu Pendampingan)</option>
+              <option value="Baik">Hanya Kategori Baik</option>
+              <option value="Perlu Pendampingan">Hanya Perlu Pendampingan</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label for="status_data" class="form-label fw-semibold small">Filter Status Data</label>
+            <select class="form-select" id="status_data" name="status_data">
+              <option value="">Semua Status Data</option>
+              <option value="berlabel">Hanya Data Berlabel (Training/Validasi)</option>
+              <option value="prediksi">Hanya Data Hasil Prediksi C4.5</option>
             </select>
           </div>
 
@@ -71,7 +89,9 @@ function downloadPDF() {
   const periode = document.getElementById('periode').value;
   const kelas = document.getElementById('kelas').value;
   const angkatan = document.getElementById('angkatan').value;
-  const url = `{{ url_for('bk.laporan_pdf') }}?periode=${encodeURIComponent(periode)}&kelas=${encodeURIComponent(kelas)}&angkatan=${encodeURIComponent(angkatan)}`;
+  const label = document.getElementById('label').value;
+  const status_data = document.getElementById('status_data').value;
+  const url = `{{ url_for('bk.laporan_pdf') }}?periode=${encodeURIComponent(periode)}&kelas=${encodeURIComponent(kelas)}&angkatan=${encodeURIComponent(angkatan)}&label=${encodeURIComponent(label)}&status_data=${encodeURIComponent(status_data)}`;
   window.open(url, '_blank');
 }
 
@@ -79,7 +99,9 @@ function downloadExcel() {
   const periode = document.getElementById('periode').value;
   const kelas = document.getElementById('kelas').value;
   const angkatan = document.getElementById('angkatan').value;
-  const url = `{{ url_for('bk.laporan_excel') }}?periode=${encodeURIComponent(periode)}&kelas=${encodeURIComponent(kelas)}&angkatan=${encodeURIComponent(angkatan)}`;
+  const label = document.getElementById('label').value;
+  const status_data = document.getElementById('status_data').value;
+  const url = `{{ url_for('bk.laporan_excel') }}?periode=${encodeURIComponent(periode)}&kelas=${encodeURIComponent(kelas)}&angkatan=${encodeURIComponent(angkatan)}&label=${encodeURIComponent(label)}&status_data=${encodeURIComponent(status_data)}`;
   window.location.href = url;
 }
 </script>

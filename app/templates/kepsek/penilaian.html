@@ -19,6 +19,9 @@
   <div class="card-body p-3">
     <form method="GET" class="row g-2 align-items-center">
       <div class="col-md-2">
+        <input type="text" class="form-control form-control-sm" name="search" placeholder="Cari Kode Siswa..." value="{{ search or '' }}">
+      </div>
+      <div class="col-md-2">
         <select class="form-select form-select-sm" name="periode">
           <option value="">Semua Periode</option>
           {% for p in daftar_periode %}
@@ -26,7 +29,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <select class="form-select form-select-sm" name="kelas">
           <option value="">Semua Kelas</option>
           {% for k in daftar_kelas %}
@@ -42,7 +45,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <select class="form-select form-select-sm" name="label">
           <option value="">Semua Label</option>
           <option value="Baik" {% if label == 'Baik' %}selected{% endif %}>Baik</option>
@@ -70,18 +73,17 @@
           <th>Regulasi Emosi</th>
           <th>Empati</th>
           <th>Kerja Sama</th>
-          <th>Label BK</th>
-          <th>Hasil C4.5</th>
-          <th class="text-end">Aksi</th>
+          <th>Label Rekomendasi</th>
+          <th>Prediksi C4.5</th>
         </tr>
       </thead>
       <tbody>
         {% for p in pagination.items %}
         <tr>
           <td>
-            <a href="{{ url_for('kepsek.penilaian_detail', id=p.id) }}" class="fw-bold text-decoration-none">
+            <span class="badge bg-light text-dark border font-monospace fw-semibold">
               {{ p.siswa.kode_siswa }}
-            </a>
+            </span>
           </td>
           <td><span class="badge bg-light text-dark border">{{ p.siswa.kelas }}</span></td>
           <td><span class="badge bg-info-subtle text-info border border-info-subtle">{{ p.siswa.angkatan }}</span></td>
@@ -125,11 +127,6 @@
               <span class="text-muted small">-</span>
             {% endif %}
           </td>
-          <td class="text-end">
-            <a href="{{ url_for('kepsek.penilaian_detail', id=p.id) }}" class="btn btn-outline-info btn-sm" title="Lihat Detail">
-              <i class="bi bi-eye"></i> Detail
-            </a>
-          </td>
         </tr>
         {% else %}
         <tr>
@@ -150,7 +147,7 @@
       {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
         {% if page_num %}
           <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-            <a class="page-link" href="{{ url_for('kepsek.penilaian_list', page=page_num, periode=periode, kelas=kelas, angkatan=angkatan, label=label) }}">{{ page_num }}</a>
+            <a class="page-link" href="{{ url_for('kepsek.penilaian_list', page=page_num, search=search, periode=periode, kelas=kelas, angkatan=angkatan, label=label) }}">{{ page_num }}</a>
           </li>
         {% else %}
           <li class="page-item disabled"><span class="page-link">...</span></li>

@@ -218,3 +218,43 @@ body {
   display: inline-block;
 }
 
+/* ── Mobile Responsive Sidebar Drawer ──────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -270px;
+    height: 100vh;
+    z-index: 1050;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar.show {
+    left: 0;
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+  }
+  .main-wrapper {
+    width: 100%;
+  }
+  .content-body {
+    padding: 1.25rem 1rem;
+  }
+}
+
+

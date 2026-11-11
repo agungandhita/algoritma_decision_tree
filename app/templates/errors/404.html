@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}404 - Halaman Tidak Ditemukan{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+  <div class="col-md-7 text-center">
+    <div class="card shadow-sm border-0 py-5 px-4">
+      <div class="card-body">
+        <div class="mb-4">
+          <i class="bi bi-question-circle-fill text-info" style="font-size: 4.5rem;"></i>
+        </div>
+        <h2 class="fw-bold text-dark mb-2">404 — Halaman Tidak Ditemukan</h2>
+        <p class="text-muted mb-4 lead fs-6">
+          Halaman atau sumber daya yang Anda cari tidak tersedia di sistem SIMONSEM.
+        </p>
+        <div>
+          <a href="javascript:history.back()" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left me-1"></i> Kembali
+          </a>
+          <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="bi bi-house-door-fill me-1"></i> Dashboard Utama
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
