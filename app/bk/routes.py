@@ -37,6 +37,7 @@ from app.models import (
     Siswa,
     catat_audit,
     db,
+    gen_uuid,
 )
 
 bk_bp = Blueprint('bk', __name__)
@@ -73,7 +74,7 @@ def prediksikan_penilaian(penilaian: Penilaian, user_id: str | None = None) -> N
             clf = C45Classifier(min_samples_split=2, max_depth=10)
             clf.fit(data_latih, FITUR, versi_model=model_terbaru.versi_model)
             model_terbaru.pohon_json = json.dumps(clf.pohon_ke_dict())
-            db.session.commit()
+            db.session.flush()
 
         row = {
             'Interaksi Sosial': penilaian.kat_IS,
@@ -88,15 +89,39 @@ def prediksikan_penilaian(penilaian: Penilaian, user_id: str | None = None) -> N
         penilaian.prediksi_c45 = pred
         penilaian.kepercayaan_c45 = conf
 
-        hk = HasilKlasifikasi.query.filter_by(penilaian_id=penilaian.id).first()
+        # Pastikan penilaian memiliki ID dan terdaftar di session
+        if not penilaian.id:
+            penilaian.id = gen_uuid()
+        if penilaian not in db.session:
+            db.session.add(penilaian)
+        db.session.flush()
+
+        hk = None
+        if penilaian.id:
+            hk = HasilKlasifikasi.query.filter_by(penilaian_id=penilaian.id).first()
         if not hk:
-            hk = HasilKlasifikasi(penilaian_id=penilaian.id)
+            hk = HasilKlasifikasi(
+                penilaian_id=penilaian.id,
+                siswa_id=penilaian.siswa_id,
+                periode_id=penilaian.periode_id,
+                periode=penilaian.periode,
+                model_id=model_terbaru.id
+            )
             db.session.add(hk)
+        else:
+            hk.penilaian_id = penilaian.id
+            hk.siswa_id = penilaian.siswa_id
+            hk.periode_id = penilaian.periode_id
+            hk.periode = penilaian.periode
+            hk.model_id = model_terbaru.id
+
         hk.versi_model = model_terbaru.versi_model
         hk.prediksi = pred
         hk.kepercayaan = conf
         hk.path_aturan = path
         hk.ditinjau_oleh = user_id
+        hk.label_aktual = penilaian.label
+        hk.is_tepat = (pred == penilaian.label) if penilaian.label else None
     except Exception as e:
         current_app.logger.warning(f"Gagal auto-klasifikasi C4.5: {e}")
 
@@ -430,9 +455,10 @@ def penilaian_import():
                 versi_revisi=1
             )
             penilaian.hitung_dan_kategorikan()
+            db.session.add(penilaian)
+            db.session.flush()
             prediksikan_penilaian(penilaian, user_id=str(current_user.id))
 
-            db.session.add(penilaian)
             n_sukses += 1
 
         catat_audit(
@@ -552,9 +578,10 @@ def penilaian_tambah():
             versi_revisi=1
         )
         penilaian.hitung_dan_kategorikan()
-        prediksikan_penilaian(penilaian, user_id=penilai_id_val)
-
         db.session.add(penilaian)
+        db.session.flush()
+
+        prediksikan_penilaian(penilaian, user_id=penilai_id_val)
 
         # Audit Trail
         catat_audit(
@@ -1017,14 +1044,28 @@ def klasifikasi_jalankan():
 
         hk = HasilKlasifikasi.query.filter_by(penilaian_id=p.id).first()
         if not hk:
-            hk = HasilKlasifikasi(penilaian_id=p.id)
+            hk = HasilKlasifikasi(
+                penilaian_id=p.id,
+                siswa_id=p.siswa_id,
+                periode_id=p.periode_id,
+                periode=p.periode,
+                model_id=model_terbaru.id
+            )
             db.session.add(hk)
+        else:
+            hk.penilaian_id = p.id
+            hk.siswa_id = p.siswa_id
+            hk.periode_id = p.periode_id
+            hk.periode = p.periode
+            hk.model_id = model_terbaru.id
 
         hk.versi_model = model_terbaru.versi_model
         hk.prediksi = pred
         hk.kepercayaan = conf
         hk.path_aturan = path
         hk.ditinjau_oleh = current_uid
+        hk.label_aktual = p.label
+        hk.is_tepat = (pred == p.label) if p.label else None
 
         # Sinkronkan kolom tracking di tabel Penilaian
         p.prediksi_c45 = pred

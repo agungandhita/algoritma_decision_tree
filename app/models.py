@@ -23,6 +23,8 @@ class BaseModel(db.Model):
     __allow_unmapped__ = True
 
     def __init__(self, **kwargs: Any):
+        if not kwargs.get('id'):
+            kwargs['id'] = gen_uuid()
         super().__init__(**kwargs)
         for k, v in kwargs.items():
             setattr(self, k, v)
